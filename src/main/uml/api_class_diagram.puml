@@ -1,6 +1,6 @@
 @startuml
 title
-    Keyple - keyple-card-calypso-crypto-pki-java-lib - 0.1.+ (2024-02-09)
+    Keyple - keyple-card-calypso-crypto-pki-java-lib - 0.1.+ (2024-02-13)
 end title
 
 ' == THEME ==
@@ -64,10 +64,17 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +{static} PkiExtensionService getInstance ()
 
         +<back:pink>AsymmetricCryptoCardTransactionManagerFactory</back> createAsymmetricCryptoCardTransactionManagerFactory ()
+
         +<back:pink>PcaCertificate</back> createPcaCertificate (...)
+
         +<back:pink>CaCertificate</back> createCaCertificate (...)
+        +<back:pink>CaCertificate</back> createCaCertificate (..., CaCertificateValidatorSpi caCertificateValidator)
+
         +<back:pink>CaCertificateParser</back> createCaCertificateParser (CaCertificateType certificateType)
+        +<back:pink>CaCertificateParser</back> createCaCertificateParser (CaCertificateType certificateType, CaCertificateValidatorSpi caCertificateValidator)
+
         +<back:pink>CardCertificateParser</back> createCardCertificateParser (CardCertificateType certificateType)
+        +<back:pink>CardCertificateParser</back> createCardCertificateParser (CardCertificateType certificateType, CardCertificateValidatorSpi cardCertificateValidator)
 
         +<back:lightgreen>CalypsoCertificateApiFactory</back> getCalypsoCertificateApiFactory ()
     }
@@ -77,12 +84,22 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
     +enum CardCertificateType <<green>> {
         CALYPSO_V1
     }
+    package spi {
+        +interface "CaCertificateValidatorSpi" as CaCertificateValidatorSpi <<red>> {
+            +boolean isCertificateValid (<back:pink>CaCertificate</back> caCertificate)
+        }
+        +interface "CardCertificateValidatorSpi" as CardCertificateValidatorSpi <<red>> {
+            +boolean isCertificateValid (<back:pink>CardCertificate</back> cardCertificate, <back:pink>CalypsoCard</back> card)
+        }
+    }
 }
 
 ' Associations
 
 PkiExtensionService ..> CaCertificateType #C_USE : use >
 PkiExtensionService ..> CardCertificateType #C_USE : use >
+PkiExtensionService ..> CaCertificateValidatorSpi #C_USE : use >
+PkiExtensionService ..> CardCertificateValidatorSpi #C_USE : use >
 
 ' == LAYOUT ==
 
@@ -91,5 +108,6 @@ PkiExtensionService ..> CardCertificateType #C_USE : use >
 ' == STYLE ==
 
 package pki #C_GREY1 {}
+package pki.spi #C_GREY2 {}
 
 @enduml
