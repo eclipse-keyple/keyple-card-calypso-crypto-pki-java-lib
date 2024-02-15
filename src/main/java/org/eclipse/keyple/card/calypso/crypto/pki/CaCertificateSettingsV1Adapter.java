@@ -16,24 +16,44 @@ import java.security.PublicKey;
 import org.eclipse.keypop.calypso.certificate.ca.CaCertificateSettingsV1;
 import org.eclipse.keypop.calypso.certificate.ca.spi.CaCertificateSignerSpi;
 
+/**
+ * Adapter of {@link CaCertificateSettingsV1} dedicated to the definition of a CA certificate.
+ *
+ * @since 0.1.0
+ */
 class CaCertificateSettingsV1Adapter implements CaCertificateSettingsV1 {
   @Override
   public CaCertificateSettingsV1 useExternalSigner(CaCertificateSignerSpi caCertificateSigner) {
     return null;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
   public CaCertificateSettingsV1 useInternalSigner(
       PrivateKey issuerPrivateKey, byte[] issuerPublicKeyReference) {
     return null;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
   public CaCertificateSettingsV1 setCaPublicKey(
       PublicKey caPublicKey, byte[] caPublicKeyReference) {
     return null;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
   public CaCertificateSettingsV1 setValidityPeriod(
       int startDateYear,
@@ -45,21 +65,41 @@ class CaCertificateSettingsV1Adapter implements CaCertificateSettingsV1 {
     return null;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
   public CaCertificateSettingsV1 setAid(byte[] aid) {
     return null;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
   public CaCertificateSettingsV1 setCaRights(byte caRights) {
     return null;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
   public CaCertificateSettingsV1 setCaScope(byte caScope) {
     return null;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
   public CaCertificateSettingsV1 setCaOperatingMode(byte caOperatingMode) {
     return null;

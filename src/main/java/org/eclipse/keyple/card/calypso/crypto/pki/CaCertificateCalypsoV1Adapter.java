@@ -11,12 +11,19 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import org.eclipse.keypop.calypso.card.transaction.spi.CardCertificateParser;
-import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertificateParserSpi;
+import java.security.PublicKey;
+import org.eclipse.keypop.calypso.card.transaction.spi.CaCertificate;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateException;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateSpi;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertificateSpi;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.PublicKeySpi;
 
-public class CardCertificateParserCalypsoV1
-    implements CardCertificateParser, CardCertificateParserSpi {
+/**
+ * Adapter of {@link CardCertificateSpi} for Calypso V1-compliant CA certificates.
+ *
+ * @since 0.1.0
+ */
+class CaCertificateCalypsoV1Adapter implements CaCertificate, CaCertificateSpi {
 
   /**
    * {@inheritDoc}
@@ -24,8 +31,8 @@ public class CardCertificateParserCalypsoV1
    * @since 0.1.0
    */
   @Override
-  public byte getCertificateType() {
-    return 1;
+  public byte[] getIssuerPublicKeyReference() {
+    return new byte[0];
   }
 
   /**
@@ -34,7 +41,8 @@ public class CardCertificateParserCalypsoV1
    * @since 0.1.0
    */
   @Override
-  public CardCertificateSpi parseCertificate(byte[] cardOutputData) {
+  public PublicKeySpi checkCertificateAndGetPublicKey(PublicKey issuerPublicKey)
+      throws CertificateException {
     return null;
   }
 }

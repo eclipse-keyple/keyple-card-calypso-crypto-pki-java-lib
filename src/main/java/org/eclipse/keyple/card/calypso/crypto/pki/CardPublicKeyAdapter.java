@@ -11,6 +11,17 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import org.eclipse.keypop.calypso.card.transaction.spi.CaCertificateParser;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardPublicKeySpi;
 
-public class CaCertificateParserCalypsoV1 implements CaCertificateParser {}
+class CardPublicKeyAdapter implements CardPublicKeySpi {
+  private final byte[] publicKeyRawValue;
+
+  CardPublicKeyAdapter(byte[] publicKeyRawValue) {
+    this.publicKeyRawValue = publicKeyRawValue;
+  }
+
+  @Override
+  public byte[] getRawValue() {
+    return publicKeyRawValue;
+  }
+}

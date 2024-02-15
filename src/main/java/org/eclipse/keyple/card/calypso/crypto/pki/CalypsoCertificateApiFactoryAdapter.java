@@ -13,14 +13,25 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.certificate.CalypsoCertificateApiFactory;
-import org.eclipse.keypop.calypso.certificate.ca.CaCertificateManager;
+import org.eclipse.keypop.calypso.certificate.ca.CaCertificateBuilder;
 import org.eclipse.keypop.calypso.certificate.ca.CaCertificateSettings;
 import org.eclipse.keypop.calypso.certificate.ca.CaCertificateSettingsV1;
-import org.eclipse.keypop.calypso.certificate.card.CardCertificateManager;
+import org.eclipse.keypop.calypso.certificate.card.CardCertificateBuilder;
 import org.eclipse.keypop.calypso.certificate.card.CardCertificateSettings;
 import org.eclipse.keypop.calypso.certificate.card.CardCertificateSettingsV1;
 
-public class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateApiFactory {
+/**
+ * Adapter of {@link CalypsoCertificateApiFactory}.
+ *
+ * @since 0.1.0
+ */
+class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateApiFactory {
+
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
   public <T extends CaCertificateSettings> T createCaCertificateSettings(Class<T> classOfT) {
     Assert.getInstance().notNull(classOfT, "classOfT");
@@ -31,6 +42,11 @@ public class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateAp
         "Support for class '" + classOfT.getName() + "' not yet implemented");
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
   public <T extends CardCertificateSettings> T createCardCertificateSettings(Class<T> classOfT) {
     Assert.getInstance().notNull(classOfT, "classOfT");
@@ -41,15 +57,25 @@ public class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateAp
         "Support for class '" + classOfT.getName() + "' not yet implemented");
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
-  public CaCertificateManager createCaCertificateManager(CaCertificateSettings settings) {
+  public CaCertificateBuilder createCaCertificateBuilder(CaCertificateSettings settings) {
     Assert.getInstance().notNull(settings, "settings");
-    return null;
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
   @Override
-  public CardCertificateManager createCardCertificateManager(CardCertificateSettings settings) {
+  public CardCertificateBuilder createCardCertificateBuilder(CardCertificateSettings settings) {
     Assert.getInstance().notNull(settings, "settings");
-    return null;
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 }

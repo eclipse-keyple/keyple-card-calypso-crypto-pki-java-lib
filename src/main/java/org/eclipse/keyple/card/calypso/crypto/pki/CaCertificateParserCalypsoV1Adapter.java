@@ -11,4 +11,29 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-public class CaCertificateManagerAdapterCalypsoV1 {}
+import org.eclipse.keypop.calypso.card.transaction.spi.CaCertificateParser;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateParserSpi;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateSpi;
+
+class CaCertificateParserCalypsoV1Adapter implements CaCertificateParser, CaCertificateParserSpi {
+
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
+  @Override
+  public byte getCertificateType() {
+    return 0;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
+  @Override
+  public CaCertificateSpi parseCertificate(byte[] cardOutputData) {
+    return null;
+  }
+}

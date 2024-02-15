@@ -11,7 +11,14 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
+import java.io.IOException;
+import java.math.BigInteger;
+import java.security.*;
+import java.security.spec.*;
+import java.util.Arrays;
+import org.bouncycastle.asn1.*;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardPublicKeySpi;
+import org.eclipse.keypop.calypso.crypto.asymmetric.transaction.InvalidCardPublicKeyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.transaction.spi.AsymmetricCryptoCardTransactionManagerSpi;
 
 /**
@@ -22,13 +29,38 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.transaction.spi.AsymmetricCr
 final class AsymmetricCryptoCardTransactionManagerAdapter
     implements AsymmetricCryptoCardTransactionManagerSpi {
 
+  private static final String CARD_SESSION_SIGNATURE_SCHEME = "SHA256withECDSA";
+  private static final String BOUNCY_CASTLE = "BC";
+  private static final String ELLIPTIC_CURVE = "EC";
+  private static final String EC_DOMAIN_PARAMETERS_NAME = "secp256r1";
+  private final Signature signature;
+  private final KeyFactory keyFactory;
+  private final ECParameterSpec ecParameterSpec;
+  private boolean isRequest = true;
+
   /**
-   * {@inheritDoc}
+   * Constructs a new instance of {@link AsymmetricCryptoCardTransactionManagerAdapter}.
    *
+   * <p>Initializes the necessary cryptographic components used for card transaction management.
+   *
+   * @throws IllegalStateException If an error occurs during the initialization process.
    * @since 0.1.0
    */
-  @Override
-  public void initTerminalPkiSession(CardPublicKeySpi cardPublicKey) {}
+  AsymmetricCryptoCardTransactionManagerAdapter() {
+    try {
+      signature = Signature.getInstance(CARD_SESSION_SIGNATURE_SCHEME, BOUNCY_CASTLE);
+      AlgorithmParameters algorithmParameters = AlgorithmParameters.getInstance(ELLIPTIC_CURVE);
+      algorithmParameters.init(new ECGenParameterSpec(EC_DOMAIN_PARAMETERS_NAME));
+      ecParameterSpec = algorithmParameters.getParameterSpec(ECParameterSpec.class);
+      keyFactory = KeyFactory.getInstance(ELLIPTIC_CURVE);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    } catch (NoSuchProviderException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    } catch (InvalidParameterSpecException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    }
+  }
 
   /**
    * {@inheritDoc}
@@ -36,7 +68,54 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
    * @since 0.1.0
    */
   @Override
-  public void updateTerminalPkiSession(byte[] cardApdu) {}
+  public void initTerminalPkiSession(CardPublicKeySpi cardPublicKey)
+      throws InvalidCardPublicKeyException {
+    try {
+      byte[] cardPub = cardPublicKey.getRawValue();
+      ECPoint ecPoint =
+          new ECPoint(
+              new BigInteger(1, Arrays.copyOfRange(cardPub, 0, 32)),
+              new BigInteger(1, Arrays.copyOfRange(cardPub, 32, 64)));
+      ECPublicKeySpec ecPublicKeySpec = new ECPublicKeySpec(ecPoint, ecParameterSpec);
+      PublicKey publicKey = keyFactory.generatePublic(ecPublicKeySpec);
+      signature.initVerify(publicKey);
+      signature.update((byte) 0x10); // see requirement R203
+    } catch (InvalidKeySpecException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    } catch (SignatureException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    } catch (IllegalArgumentException e) {
+      throw new InvalidCardPublicKeyException(e.getMessage(), e);
+    } catch (InvalidKeyException e) {
+      throw new InvalidCardPublicKeyException(e.getMessage(), e);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
+  @Override
+  public void updateTerminalPkiSession(byte[] cardApdu) {
+    try {
+      if (isRequest) {
+        if (cardApdu.length == 5) {
+          signature.update((byte) cardApdu.length);
+          signature.update(cardApdu);
+        } else {
+          signature.update((byte) cardApdu.length);
+          signature.update(cardApdu, 0, 6 + cardApdu[4]);
+        }
+      } else {
+        signature.update((byte) cardApdu.length);
+        signature.update(cardApdu);
+      }
+      isRequest = !isRequest;
+    } catch (SignatureException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    }
+  }
 
   /**
    * {@inheritDoc}
@@ -45,6 +124,19 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
    */
   @Override
   public boolean isCardPkiSessionValid(byte[] cardSessionSignature) {
-    return false;
+    try {
+      DERSequence asn1Signature =
+          new DERSequence(
+              new ASN1Integer[] {
+                new ASN1Integer(new BigInteger(1, Arrays.copyOfRange(cardSessionSignature, 0, 32))),
+                new ASN1Integer(new BigInteger(1, Arrays.copyOfRange(cardSessionSignature, 32, 64)))
+              });
+      byte[] asn1EncodedSignature = asn1Signature.getEncoded();
+      return signature.verify(asn1EncodedSignature);
+    } catch (SignatureException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    } catch (IOException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    }
   }
 }

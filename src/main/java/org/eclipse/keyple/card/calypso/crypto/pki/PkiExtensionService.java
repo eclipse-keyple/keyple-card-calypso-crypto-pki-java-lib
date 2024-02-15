@@ -11,6 +11,10 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
+import java.security.Security;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.eclipse.keyple.card.calypso.crypto.pki.spi.CaCertificateValidatorSpi;
+import org.eclipse.keyple.card.calypso.crypto.pki.spi.CardCertificateValidatorSpi;
 import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.card.transaction.spi.*;
 import org.eclipse.keypop.calypso.certificate.CalypsoCertificateApiFactory;
@@ -25,6 +29,10 @@ public class PkiExtensionService {
 
   /** Singleton */
   private static final PkiExtensionService INSTANCE = new PkiExtensionService();
+
+  static {
+    Security.addProvider(new BouncyCastleProvider());
+  }
 
   /**
    * Returns the service instance.
@@ -55,7 +63,7 @@ public class PkiExtensionService {
    */
   public PcaCertificate createPcaCertificate() {
     // TODO
-    return null;
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 
   /**
@@ -66,7 +74,7 @@ public class PkiExtensionService {
    */
   public CaCertificate createCaCertificate() {
     // TODO
-    return null;
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 
   /**
@@ -79,11 +87,31 @@ public class PkiExtensionService {
    */
   public CaCertificateParser createCaCertificateParser(CaCertificateType certificateType) {
     Assert.getInstance().notNull(certificateType, "certificateType");
-    return new CaCertificateParserCalypsoV1();
+    return new CaCertificateParserCalypsoV1Adapter();
+  }
+
+  /**
+   * Creates a {@link CaCertificateParser} object based on the provided CA certificate type.
+   *
+   * <p>When using this parser, the provided validator is used to determine the certificate
+   * validity.
+   *
+   * @param certificateType The type of CA certificate.
+   * @param caCertificateValidator The validator to be used when checking the certificate.
+   * @return A not null reference.
+   * @throws IllegalArgumentException If the provided argument is null.
+   * @since 0.1.0
+   */
+  public CaCertificateParser createCaCertificateParser(
+      CaCertificateType certificateType, CaCertificateValidatorSpi caCertificateValidator) {
+    Assert.getInstance().notNull(certificateType, "certificateType");
+    return new CaCertificateParserCalypsoV1Adapter();
   }
 
   /**
    * Creates a {@link CardCertificateParser} object based on the provided card certificate type.
+   *
+   * <p>When using this parser, only basic format verifications are done.
    *
    * @param certificateType The type of card certificate.
    * @return A not null reference.
@@ -92,7 +120,27 @@ public class PkiExtensionService {
    */
   public CardCertificateParser createCardCertificateFactory(CardCertificateType certificateType) {
     Assert.getInstance().notNull(certificateType, "certificateType");
-    return new CardCertificateParserCalypsoV1();
+    return new CardCertificateParserCalypsoV1Adapter();
+  }
+
+  /**
+   * Creates a {@link CardCertificateParser} object based on the provided card certificate type.
+   *
+   * <p>When using this parser, the provided validator is used to determine the certificate
+   * validity.
+   *
+   * @param certificateType The type of card certificate.
+   * @param cardCertificateValidator The validator to be used when checking the certificate.
+   * @return A not null reference.
+   * @throws IllegalArgumentException If one of the provided arguments is null.
+   * @since 0.1.0
+   */
+  public CardCertificateParser createCardCertificateFactory(
+      CardCertificateType certificateType, CardCertificateValidatorSpi cardCertificateValidator) {
+    Assert.getInstance()
+        .notNull(certificateType, "certificateType")
+        .notNull(cardCertificateValidator, "cardCertificateValidator");
+    return new CardCertificateParserCalypsoV1Adapter();
   }
 
   /**
@@ -102,6 +150,6 @@ public class PkiExtensionService {
    * @since 0.1.0
    */
   public CalypsoCertificateApiFactory getCalypsoCertificateApiFactory() {
-    return null;
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 }

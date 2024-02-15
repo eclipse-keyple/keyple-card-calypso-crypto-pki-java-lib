@@ -11,4 +11,15 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-public class CardCertificateManagerAdapterCalypsoV1 {}
+import org.eclipse.keypop.calypso.card.transaction.spi.PcaCertificate;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateException;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.PcaCertificateSpi;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.PublicKeySpi;
+
+class PcaCertificateAdapter implements PcaCertificate, PcaCertificateSpi {
+
+  @Override
+  public PublicKeySpi checkCertificateAndGetPublicKey() throws CertificateException {
+    return null;
+  }
+}

@@ -35,6 +35,8 @@ dependencies {
     implementation("org.eclipse.keypop:keypop-calypso-crypto-asymmetric-java-api:0.2.0-SNAPSHOT") { isChanging = true }
     implementation("org.eclipse.keypop:keypop-calypso-certificate-java-api:0.1.0-SNAPSHOT") { isChanging = true }
     implementation("org.eclipse.keyple:keyple-util-java-lib:2.3.1")
+    implementation("org.bouncycastle:bcprov-jdk15to18:1.74")
+    implementation("org.bouncycastle:bcpkix-jdk15to18:1.74")
     implementation("org.slf4j:slf4j-api:1.7.32")
     implementation("com.google.code.gson:gson:2.10.1")
     testImplementation("org.slf4j:slf4j-simple:1.7.32")
