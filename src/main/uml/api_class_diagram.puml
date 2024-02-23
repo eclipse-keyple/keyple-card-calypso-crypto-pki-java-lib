@@ -1,6 +1,6 @@
 @startuml
 title
-    Keyple - keyple-card-calypso-crypto-pki-java-lib - 0.1.+ (2024-02-13)
+    Keyple - keyple-card-calypso-crypto-pki-java-lib - 0.1.+ (2024-02-23)
 end title
 
 ' == THEME ==
@@ -66,17 +66,17 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
 
         +<back:pink>AsymmetricCryptoCardTransactionManagerFactory</back> createAsymmetricCryptoCardTransactionManagerFactory ()
 
-        +<back:pink>PcaCertificate</back> createPcaCertificate (byte[] publicKeyReference, <back:yellow>PublicKey</back> publicKey)
-        +<back:pink>PcaCertificate</back> createPcaCertificate (byte[] publicKeyReference, byte[] publicKeyModulus)
+        +<back:pink>PcaCertificate</back> createPcaCertificate (byte[] pcaPublicKeyReference, <back:yellow>PublicKey</back> pcaPublicKey)
+        +<back:pink>PcaCertificate</back> createPcaCertificate (byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus)
 
-        +<back:pink>CaCertificate</back> createCaCertificate (byte[] rawValue)
-        +<back:pink>CaCertificate</back> createCaCertificate (byte[] rawValue, CaCertificateValidatorSpi caCertificateValidator)
+        +<back:pink>CaCertificate</back> createCaCertificate (byte[] caCertificate)
+        +<back:pink>CaCertificate</back> createCaCertificate (byte[] caCertificate, CaCertificateValidatorSpi caCertificateValidator)
 
-        +<back:pink>CaCertificateParser</back> createCaCertificateParser (CaCertificateType certificateType)
-        +<back:pink>CaCertificateParser</back> createCaCertificateParser (CaCertificateType certificateType, CaCertificateValidatorSpi caCertificateValidator)
+        +<back:pink>CaCertificateParser</back> createCaCertificateParser (CaCertificateType caCertificateType)
+        +<back:pink>CaCertificateParser</back> createCaCertificateParser (CaCertificateType caCertificateType, CaCertificateValidatorSpi caCertificateValidator)
 
-        +<back:pink>CardCertificateParser</back> createCardCertificateParser (CardCertificateType certificateType)
-        +<back:pink>CardCertificateParser</back> createCardCertificateParser (CardCertificateType certificateType, CardCertificateValidatorSpi cardCertificateValidator)
+        +<back:pink>CardCertificateParser</back> createCardCertificateParser (CardCertificateType cardCertificateType)
+        +<back:pink>CardCertificateParser</back> createCardCertificateParser (CardCertificateType cardCertificateType, CardCertificateValidatorSpi cardCertificateValidator)
 
         +<back:lightgreen>CalypsoCertificateApiFactory</back> getCalypsoCertificateApiFactory ()
     }
@@ -92,10 +92,10 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
     }
     package spi {
         +interface "CaCertificateValidatorSpi" as CaCertificateValidatorSpi <<red>> {
-            +boolean isCertificateValid (<back:pink>CaCertificate</back> caCertificate)
+            +boolean isCertificateValid (byte[] caCertificate)
         }
         +interface "CardCertificateValidatorSpi" as CardCertificateValidatorSpi <<red>> {
-            +boolean isCertificateValid (<back:pink>CardCertificate</back> cardCertificate, CardIdentifier cardIdentifier)
+            +boolean isCertificateValid (byte[] cardCertificate, CardIdentifier cardIdentifier)
         }
     }
 }
