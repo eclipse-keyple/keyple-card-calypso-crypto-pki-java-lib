@@ -1,4 +1,4 @@
-url: https://github.com/eclipse/keyple-card-calypso-crypto-asymmetric-java-lib
+url: https://github.com/eclipse/keyple-card-calypso-crypto-pki-java-lib
 organization:
   name: Eclipse Keyple
   url: https://keyple.org/
@@ -12,7 +12,7 @@ developers:
 scm:
   connection: scm:git:git://github.com/eclipse/keyple-card-calypso-crypto-pki-java-lib.git
   developerConnection: scm:git:https://github.com/eclipse/keyple-card-calypso-crypto-pki-java-lib.git
-  url: https://github.com/eclipse/keyple-card-calypso-crypto-asymmetric-java-lib
+  url: https://github.com/eclipse/keyple-card-calypso-crypto-pki-java-lib
 ciManagement:
   system: Jenkins
-  url: https://ci.eclipse.org/keyple/job/Keyple/job/keyple-card-calypso-crypto-asymmetric-java-lib/
+  url: https://ci.eclipse.org/keyple/job/Keyple/job/keyple-card-calypso-crypto-pki-java-lib/

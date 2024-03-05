@@ -36,11 +36,6 @@ Keypop Reader API
 * License: [MIT](https://opensource.org/licenses/MIT)
 * Sources: https://github.com/eclipse-keypop/keypop-reader-java-api
 
-Keypop Card API
-
-* License: [MIT](https://opensource.org/licenses/MIT)
-* Sources: https://github.com/eclipse-keypop/keypop-card-java-api
-
 Keypop Calypso Card API
 
 * License: [MIT](https://opensource.org/licenses/MIT)
@@ -51,10 +46,10 @@ Keypop Calypso Crypto Asymmetric API
 * License: [MIT](https://opensource.org/licenses/MIT)
 * Sources: https://github.com/eclipse-keypop/keypop-calypso-crypto-asymmetric-java-api
 
-Keypop Calypso Crypto Symmetric API
+Keypop Calypso Certificate API
 
 * License: [MIT](https://opensource.org/licenses/MIT)
-* Sources: https://github.com/eclipse-keypop/keypop-calypso-crypto-symmetric-java-api
+* Sources: https://github.com/eclipse-keypop/keypop-calypso-certificate-java-api
 
 SLF4J API
 

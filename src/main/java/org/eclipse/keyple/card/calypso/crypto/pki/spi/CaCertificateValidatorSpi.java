@@ -12,7 +12,7 @@
 package org.eclipse.keyple.card.calypso.crypto.pki.spi;
 
 /**
- * Service provider interface for validating CA certificates.
+ * SPI dedicated to external validation of CA certificates.
  *
  * <p>Implementations of this interface should provide mechanisms to verify the validity of the
  * certificate considering the information fields it contains, the signature being already verified.

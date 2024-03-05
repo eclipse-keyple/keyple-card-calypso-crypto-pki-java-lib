@@ -14,7 +14,7 @@ package org.eclipse.keyple.card.calypso.crypto.pki.spi;
 import org.eclipse.keyple.card.calypso.crypto.pki.CardIdentifier;
 
 /**
- * Service provider interface for validating card certificates.
+ * SPI dedicated to external validation of card certificates.
  *
  * <p>Implementations of this interface should provide mechanisms to verify the validity of the
  * certificate considering the information fields it contains, the signature being already verified.
