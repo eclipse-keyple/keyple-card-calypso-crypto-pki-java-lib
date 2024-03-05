@@ -11,8 +11,6 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki.spi;
 
-import org.eclipse.keypop.calypso.card.transaction.spi.CaCertificate;
-
 /**
  * Service provider interface for validating CA certificates.
  *
@@ -34,5 +32,5 @@ public interface CaCertificateValidatorSpi {
    *     or content requirements.
    * @since 0.1.0
    */
-  boolean isCertificateValid(CaCertificate caCertificate);
+  boolean isCertificateValid(byte[] caCertificate);
 }

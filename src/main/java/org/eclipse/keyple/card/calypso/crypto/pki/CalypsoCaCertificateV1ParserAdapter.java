@@ -11,11 +11,32 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
+import org.eclipse.keyple.card.calypso.crypto.pki.spi.CaCertificateValidatorSpi;
+import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.card.transaction.spi.CaCertificateParser;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateParserSpi;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateSpi;
 
-class CaCertificateParserCalypsoV1Adapter implements CaCertificateParser, CaCertificateParserSpi {
+/**
+ * Adapter for {@link CaCertificateParserSpi} dedicated to the parsing of Calypso version 1
+ * compliant CA certificates.
+ *
+ * @since 0.1.0
+ */
+class CalypsoCaCertificateV1ParserAdapter implements CaCertificateParser, CaCertificateParserSpi {
+
+  private static final byte CA_KEY_CERTIFICATE = (byte) 0x90;
+  private final CaCertificateValidatorSpi caCertificateValidator;
+
+  /**
+   * Constructor.
+   *
+   * @param caCertificateValidator null if no validator is set.
+   * @since 0.1.0 ;
+   */
+  CalypsoCaCertificateV1ParserAdapter(CaCertificateValidatorSpi caCertificateValidator) {
+    this.caCertificateValidator = caCertificateValidator;
+  }
 
   /**
    * {@inheritDoc}
@@ -24,7 +45,7 @@ class CaCertificateParserCalypsoV1Adapter implements CaCertificateParser, CaCert
    */
   @Override
   public byte getCertificateType() {
-    return 0;
+    return CA_KEY_CERTIFICATE;
   }
 
   /**
@@ -34,6 +55,7 @@ class CaCertificateParserCalypsoV1Adapter implements CaCertificateParser, CaCert
    */
   @Override
   public CaCertificateSpi parseCertificate(byte[] cardOutputData) {
-    return null;
+    Assert.getInstance().notNull(cardOutputData, "cardOutputData");
+    return new CalypsoCaCertificateV1Adapter(cardOutputData, caCertificateValidator);
   }
 }

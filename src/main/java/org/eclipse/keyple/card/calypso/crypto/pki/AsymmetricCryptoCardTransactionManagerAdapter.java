@@ -17,9 +17,13 @@ import java.security.*;
 import java.security.spec.*;
 import java.util.Arrays;
 import org.bouncycastle.asn1.*;
+import org.eclipse.keyple.core.util.HexUtil;
+import org.eclipse.keypop.calypso.card.transaction.spi.CardTransactionCryptoExtension;
+import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardPublicKeySpi;
-import org.eclipse.keypop.calypso.crypto.asymmetric.transaction.InvalidCardPublicKeyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.transaction.spi.AsymmetricCryptoCardTransactionManagerSpi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Adapter of {@link AsymmetricCryptoCardTransactionManagerSpi}.
@@ -27,7 +31,10 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.transaction.spi.AsymmetricCr
  * @since 0.1.0
  */
 final class AsymmetricCryptoCardTransactionManagerAdapter
-    implements AsymmetricCryptoCardTransactionManagerSpi {
+    implements AsymmetricCryptoCardTransactionManagerSpi, CardTransactionCryptoExtension {
+
+  private static final Logger logger =
+      LoggerFactory.getLogger(AsymmetricCryptoCardTransactionManagerAdapter.class);
 
   private static final String CARD_SESSION_SIGNATURE_SCHEME = "SHA256withECDSA";
   private static final String BOUNCY_CASTLE = "BC";
@@ -69,7 +76,11 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
    */
   @Override
   public void initTerminalPkiSession(CardPublicKeySpi cardPublicKey)
-      throws InvalidCardPublicKeyException {
+      throws AsymmetricCryptoException {
+    if (logger.isDebugEnabled()) {
+      String cardPublicKeyHex = HexUtil.toHex(cardPublicKey.getRawValue());
+      logger.debug("Card public key: {}", cardPublicKeyHex);
+    }
     try {
       byte[] cardPub = cardPublicKey.getRawValue();
       ECPoint ecPoint =
@@ -81,13 +92,13 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       signature.initVerify(publicKey);
       signature.update((byte) 0x10); // see requirement R203
     } catch (InvalidKeySpecException e) {
-      throw new IllegalStateException(e.getMessage(), e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     } catch (SignatureException e) {
-      throw new IllegalStateException(e.getMessage(), e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     } catch (IllegalArgumentException e) {
-      throw new InvalidCardPublicKeyException(e.getMessage(), e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     } catch (InvalidKeyException e) {
-      throw new InvalidCardPublicKeyException(e.getMessage(), e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     }
   }
 
@@ -97,23 +108,25 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
    * @since 0.1.0
    */
   @Override
-  public void updateTerminalPkiSession(byte[] cardApdu) {
+  public void updateTerminalPkiSession(byte[] cardApdu) throws AsymmetricCryptoException {
     try {
-      if (isRequest) {
-        if (cardApdu.length == 5) {
-          signature.update((byte) cardApdu.length);
-          signature.update(cardApdu);
-        } else {
-          signature.update((byte) cardApdu.length);
-          signature.update(cardApdu, 0, 6 + cardApdu[4]);
-        }
+      byte[] dataToHash;
+      // TODO Verify this
+      if (isRequest && cardApdu[4] == cardApdu.length - 6) {
+        // case 4 command, we ignore Le
+        dataToHash = Arrays.copyOf(cardApdu, cardApdu.length - 1);
       } else {
-        signature.update((byte) cardApdu.length);
-        signature.update(cardApdu);
+        dataToHash = cardApdu;
       }
+      if (logger.isDebugEnabled()) {
+        String dataToHashHex = HexUtil.toHex(dataToHash);
+        logger.debug("Update hash with: {}", dataToHashHex);
+      }
+      signature.update((byte) dataToHash.length);
+      signature.update(dataToHash);
       isRequest = !isRequest;
     } catch (SignatureException e) {
-      throw new IllegalStateException(e.getMessage(), e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     }
   }
 
@@ -123,8 +136,12 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
    * @since 0.1.0
    */
   @Override
-  public boolean isCardPkiSessionValid(byte[] cardSessionSignature) {
+  public boolean isCardPkiSessionValid(byte[] cardSessionSignature)
+      throws AsymmetricCryptoException {
     try {
+      // Creates a DER sequence containing the first 32 bytes and the next 32 bytes from
+      // cardSessionSignature as separate integers. Then, encodes the DER sequence into a byte
+      // array.
       DERSequence asn1Signature =
           new DERSequence(
               new ASN1Integer[] {
@@ -134,9 +151,9 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       byte[] asn1EncodedSignature = asn1Signature.getEncoded();
       return signature.verify(asn1EncodedSignature);
     } catch (SignatureException e) {
-      throw new IllegalStateException(e.getMessage(), e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     } catch (IOException e) {
-      throw new IllegalStateException(e.getMessage(), e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     }
   }
 }

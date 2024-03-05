@@ -11,33 +11,26 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardPublicKeySpi;
-
 /**
- * Adapter of {@link CardPublicKeySpi}.
+ * Provides methods for retrieving card identifiers.
  *
  * @since 0.1.0
  */
-class CardPublicKeyAdapter implements CardPublicKeySpi {
-  private final byte[] publicKeyRawValue;
+public interface CardIdentifier {
 
   /**
-   * Constructor.
+   * Retrieves the AID of the card, as a byte array.
    *
-   * @param publicKeyRawValue A 64-byte byte array containing the ECC public key.
+   * @return A not empty byte array.
    * @since 0.1.0
    */
-  CardPublicKeyAdapter(byte[] publicKeyRawValue) {
-    this.publicKeyRawValue = publicKeyRawValue;
-  }
+  byte[] getAid();
 
   /**
-   * {@inheritDoc}
+   * Retrieves the serial number of the card, as a byte array.
    *
+   * @return An 8-byte byte array.
    * @since 0.1.0
    */
-  @Override
-  public byte[] getRawValue() {
-    return publicKeyRawValue;
-  }
+  byte[] getSerialNumber();
 }

@@ -12,13 +12,11 @@
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import org.eclipse.keyple.core.util.Assert;
+import org.eclipse.keypop.calypso.certificate.CalypsoCaCertificateV1Generator;
+import org.eclipse.keypop.calypso.certificate.CalypsoCardCertificateV1Generator;
 import org.eclipse.keypop.calypso.certificate.CalypsoCertificateApiFactory;
-import org.eclipse.keypop.calypso.certificate.ca.CaCertificateBuilder;
-import org.eclipse.keypop.calypso.certificate.ca.CaCertificateSettings;
-import org.eclipse.keypop.calypso.certificate.ca.CaCertificateSettingsV1;
-import org.eclipse.keypop.calypso.certificate.card.CardCertificateBuilder;
-import org.eclipse.keypop.calypso.certificate.card.CardCertificateSettings;
-import org.eclipse.keypop.calypso.certificate.card.CardCertificateSettingsV1;
+import org.eclipse.keypop.calypso.certificate.CalypsoCertificateStore;
+import org.eclipse.keypop.calypso.certificate.spi.CalypsoCertificateSignerSpi;
 
 /**
  * Adapter of {@link CalypsoCertificateApiFactory}.
@@ -33,13 +31,8 @@ class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateApiFactor
    * @since 0.1.0
    */
   @Override
-  public <T extends CaCertificateSettings> T createCaCertificateSettings(Class<T> classOfT) {
-    Assert.getInstance().notNull(classOfT, "classOfT");
-    if (classOfT == CaCertificateSettingsV1.class) {
-      return classOfT.cast(new CaCertificateSettingsV1Adapter());
-    }
-    throw new UnsupportedOperationException(
-        "Support for class '" + classOfT.getName() + "' not yet implemented");
+  public CalypsoCertificateStore getCalypsoCertificateStore() {
+    return CalypsoCertificateStoreAdapter.getInstance();
   }
 
   /**
@@ -48,13 +41,14 @@ class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateApiFactor
    * @since 0.1.0
    */
   @Override
-  public <T extends CardCertificateSettings> T createCardCertificateSettings(Class<T> classOfT) {
-    Assert.getInstance().notNull(classOfT, "classOfT");
-    if (classOfT == CardCertificateSettingsV1.class) {
-      return classOfT.cast(new CardCertificateSettingsV1Adapter());
-    }
-    throw new UnsupportedOperationException(
-        "Support for class '" + classOfT.getName() + "' not yet implemented");
+  public CalypsoCaCertificateV1Generator createCalypsoCaCertificateV1Generator(
+      byte[] issuerPublicKeyReference, CalypsoCertificateSignerSpi caCertificateSigner) {
+    Assert.getInstance()
+        .notNull(issuerPublicKeyReference, "issuerPublicKeyReference")
+        .isEqual(issuerPublicKeyReference.length, 29, "issuerPublicKeyReference length")
+        .notNull(caCertificateSigner, "caCertificateSigner");
+    return new CalypsoCaCertificateV1GeneratorAdapter(
+        issuerPublicKeyReference, caCertificateSigner);
   }
 
   /**
@@ -63,19 +57,13 @@ class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateApiFactor
    * @since 0.1.0
    */
   @Override
-  public CaCertificateBuilder createCaCertificateBuilder(CaCertificateSettings settings) {
-    Assert.getInstance().notNull(settings, "settings");
-    throw new UnsupportedOperationException("Not yet implemented.");
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @since 0.1.0
-   */
-  @Override
-  public CardCertificateBuilder createCardCertificateBuilder(CardCertificateSettings settings) {
-    Assert.getInstance().notNull(settings, "settings");
-    throw new UnsupportedOperationException("Not yet implemented.");
+  public CalypsoCardCertificateV1Generator createCalypsoCardCertificateV1Generator(
+      byte[] issuerPublicKeyReference, CalypsoCertificateSignerSpi cardCertificateSigner) {
+    Assert.getInstance()
+        .notNull(issuerPublicKeyReference, "issuerPublicKeyReference")
+        .isEqual(issuerPublicKeyReference.length, 29, "issuerPublicKeyReference length")
+        .notNull(cardCertificateSigner, "cardCertificateSigner");
+    return new CalypsoCardCertificateV1GeneratorAdapter(
+        issuerPublicKeyReference, cardCertificateSigner);
   }
 }

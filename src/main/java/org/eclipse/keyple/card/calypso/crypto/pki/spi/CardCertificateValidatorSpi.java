@@ -11,8 +11,7 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki.spi;
 
-import org.eclipse.keypop.calypso.card.card.CalypsoCard;
-import org.eclipse.keypop.calypso.card.transaction.spi.CardCertificate;
+import org.eclipse.keyple.card.calypso.crypto.pki.CardIdentifier;
 
 /**
  * Service provider interface for validating card certificates.
@@ -32,11 +31,11 @@ public interface CardCertificateValidatorSpi {
    * <p>The card image is required to check the certificate content against the card identification.
    *
    * @param cardCertificate The card certificate to be validated.
-   * @param card The card image.
+   * @param cardIdentifier The card identifier.
    * @return true if the certificate is valid; false otherwise.
    * @throws IllegalArgumentException If the cardCertificate is null or does not meet the expected
    *     format or content requirements.
    * @since 0.1.0
    */
-  boolean isCertificateValid(CardCertificate cardCertificate, CalypsoCard card);
+  boolean isCertificateValid(byte[] cardCertificate, CardIdentifier cardIdentifier);
 }

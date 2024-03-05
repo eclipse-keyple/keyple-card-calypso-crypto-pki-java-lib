@@ -11,6 +11,18 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
+/**
+ * Enumerates the supported types of CA certificates.
+ *
+ * <p>Currently only supports CALYPSO_V1.
+ *
+ * @since 0.1.0
+ */
 public enum CaCertificateType {
+  /**
+   * Represents the CALYPSO_V1 CA certificate type.
+   *
+   * @since 0.1.0
+   */
   CALYPSO_V1
 }

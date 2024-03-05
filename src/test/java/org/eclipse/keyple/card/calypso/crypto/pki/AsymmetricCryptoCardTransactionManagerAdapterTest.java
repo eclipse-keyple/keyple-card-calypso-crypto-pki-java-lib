@@ -19,8 +19,8 @@ import java.security.Signature;
 import java.security.SignatureException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.eclipse.keyple.core.util.HexUtil;
+import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardPublicKeySpi;
-import org.eclipse.keypop.calypso.crypto.asymmetric.transaction.InvalidCardPublicKeyException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -63,7 +63,7 @@ public class AsymmetricCryptoCardTransactionManagerAdapterTest {
     // ... assertions on signature object state (e.g., initialized for verification)
   }
 
-  @Test(expected = InvalidCardPublicKeyException.class)
+  @Test(expected = AsymmetricCryptoException.class)
   public void initTerminalPkiSession_whenPublicKeyIsInvalid_shouldThrowICPE() throws Exception {
     // Mock an invalid CardPublicKeySpi
     CardPublicKeySpi mockPublicKey = mock(CardPublicKeySpi.class);
@@ -80,7 +80,7 @@ public class AsymmetricCryptoCardTransactionManagerAdapterTest {
 
   @Test
   public void updateTerminalPkiSession_whenAPDUsAreValid_shouldUpdateSignature()
-      throws SignatureException {
+      throws AsymmetricCryptoException, SignatureException {
     byte[] cardApdu = {1, 2, 3, 4, 5};
 
     // First call, isRequest should be true
