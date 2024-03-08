@@ -91,8 +91,8 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
 
         +byte[] getRawValue ()
     }
-    ~class "<<<back:lightGreen>CardCertificateParser</back>>>\n<<<back:pink>CardCertificateParserSpi</back>>>\n**final** CalypsoCardCertificateV1ParserAdapter" as CalypsoCardCertificateV1ParserAdapter <<blue>> {
-        ~CalypsoCardCertificateV1ParserAdapter ()
+    ~class "<<<back:lightGreen>CardCertificateParser</back>>>\n<<<back:pink>CardCertificateParserSpi</back>>>\n**final** CalypsoCardCertificateParserAdapter" as CalypsoCardCertificateParserAdapter <<blue>> {
+        ~CalypsoCardCertificateParserAdapter ()
 
         -- **CardCertificateParserSpi** --
 
@@ -109,8 +109,8 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +byte[] getCardSerialNumber ()
         +<back:pink>CardPublicKeySpi</back> checkCertificateAndGetPublicKey (<back:pink>CaCertificateContentSpi</back> issuerCertificateContent)
     }
-    ~class "<<<back:lightGreen>CaCertificateParser</back>>>\n<<<back:pink>CaCertificateParserSpi</back>>>\n**final** CalypsoCaCertificateV1ParserAdapter" as CalypsoCaCertificateV1ParserAdapter <<blue>> {
-        ~CalypsoCaCertificateV1ParserAdapter ()
+    ~class "<<<back:lightGreen>CaCertificateParser</back>>>\n<<<back:pink>CaCertificateParserSpi</back>>>\n**final** CalypsoCaCertificateParserAdapter" as CalypsoCaCertificateParserAdapter <<blue>> {
+        ~CalypsoCaCertificateParserAdapter ()
 
         -- **CaCertificateParserSpi** --
 
@@ -213,18 +213,18 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
 
 PkiExtensionService ..> AsymmetricCryptoCardTransactionManagerFactoryAdapter #C_LINK : create >
 PkiExtensionService ...> PcaCertificateAdapter #C_LINK : create >
-PkiExtensionService ..> CalypsoCaCertificateV1ParserAdapter #C_LINK : create >
+PkiExtensionService ..> CalypsoCaCertificateParserAdapter #C_LINK : create >
 PkiExtensionService ..> CalypsoCaCertificateV1Adapter #C_LINK : create >
-PkiExtensionService ..> CalypsoCardCertificateV1ParserAdapter #C_LINK : create >
+PkiExtensionService ..> CalypsoCardCertificateParserAdapter #C_LINK : create >
 PkiExtensionService .....> CalypsoCertificateApiFactoryAdapter #C_LINK : create >
 
 AsymmetricCryptoCardTransactionManagerFactoryAdapter ..> AsymmetricCryptoCardTransactionManagerAdapter #C_LINK : create >
 
 AsymmetricCryptoCardTransactionManagerAdapter ..> CardPublicKeyAdapter #C_USE : use >
 
-CalypsoCaCertificateV1ParserAdapter ..> CalypsoCaCertificateV1Adapter #C_LINK : create >
+CalypsoCaCertificateParserAdapter ..> CalypsoCaCertificateV1Adapter #C_LINK : create >
 
-CalypsoCardCertificateV1ParserAdapter ..> CalypsoCardCertificateV1Adapter #C_LINK : create >
+CalypsoCardCertificateParserAdapter ..> CalypsoCardCertificateV1Adapter #C_LINK : create >
 
 CalypsoCardCertificateV1Adapter ..> CardPublicKeyAdapter #C_LINK : create >
 

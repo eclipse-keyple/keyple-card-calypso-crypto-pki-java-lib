@@ -80,10 +80,10 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +<back:lightgreen>CalypsoCertificateApiFactory</back> getCalypsoCertificateApiFactory ()
     }
     +enum CaCertificateType <<green>> {
-        CALYPSO_V1
+        CALYPSO
     }
     +enum CardCertificateType <<green>> {
-        CALYPSO_V1
+        CALYPSO
     }
 }
 
