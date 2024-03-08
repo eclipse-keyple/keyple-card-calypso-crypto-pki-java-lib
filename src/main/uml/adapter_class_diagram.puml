@@ -1,6 +1,6 @@
 @startuml
 title
-    Keyple - Adapter of keyple-card-calypso-crypto-pki-java-lib - 0.1.0 (2024-02-22)
+    Keyple - Adapter of keyple-card-calypso-crypto-pki-java-lib - 0.1.0 (2024-03-08)
 end title
 
 ' == THEME ==
@@ -64,6 +64,7 @@ end legend
 package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
     +class "**final** PkiExtensionService" as PkiExtensionService <<green>> {
         __
+        ~boolean isTestMode ()
         ...
     }
     ' Adapters
@@ -91,7 +92,7 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +byte[] getRawValue ()
     }
     ~class "<<<back:lightGreen>CardCertificateParser</back>>>\n<<<back:pink>CardCertificateParserSpi</back>>>\n**final** CalypsoCardCertificateV1ParserAdapter" as CalypsoCardCertificateV1ParserAdapter <<blue>> {
-        ~CalypsoCardCertificateV1ParserAdapter (CardCertificateValidatorSpi cardCertificateValidator)
+        ~CalypsoCardCertificateV1ParserAdapter ()
 
         -- **CardCertificateParserSpi** --
 
@@ -99,15 +100,17 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +<back:pink>CardCertificateSpi</back> parseCertificate (byte[] cardOutputData)
     }
     ~class "<<<back:lightGreen>CardCertificate</back>>>\n<<<back:pink>CardCertificateSpi</back>>>\n**final** CalypsoCardCertificateV1Adapter" as CalypsoCardCertificateV1Adapter <<blue>> {
-        ~CalypsoCardCertificateV1Adapter (byte[] cardOutputData, CardCertificateValidatorSpi cardCertificateValidator)
+        ~CalypsoCardCertificateV1Adapter (byte[] cardOutputData)
 
         -- **CardCertificateSpi** --
 
         +byte[] getIssuerPublicKeyReference ()
-        +<back:pink>CardPublicKeySpi</back> checkCertificateAndGetPublicKey (<back:pink>CaCertificateContentSpi</back> issuerCertificateContent, <back:pink>CardIdentifierApi</back> cardIdentifierApi)
+        +byte[] getCardAid ()
+        +byte[] getCardSerialNumber ()
+        +<back:pink>CardPublicKeySpi</back> checkCertificateAndGetPublicKey (<back:pink>CaCertificateContentSpi</back> issuerCertificateContent)
     }
     ~class "<<<back:lightGreen>CaCertificateParser</back>>>\n<<<back:pink>CaCertificateParserSpi</back>>>\n**final** CalypsoCaCertificateV1ParserAdapter" as CalypsoCaCertificateV1ParserAdapter <<blue>> {
-        ~CalypsoCaCertificateV1ParserAdapter (CaCertificateValidatorSpi caCertificateValidator)
+        ~CalypsoCaCertificateV1ParserAdapter ()
 
         -- **CaCertificateParserSpi** --
 
@@ -115,7 +118,7 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +<back:pink>CaCertificateSpi</back> parseCertificate (byte[] cardOutputData)
     }
     ~class "<<<back:lightGreen>CaCertificate</back>>>\n<<<back:pink>CaCertificateSpi</back>>>\n<<<back:pink>CaCertificateContentSpi</back>>>\n**final** CalypsoCaCertificateV1Adapter" as CalypsoCaCertificateV1Adapter <<blue>> {
-        ~CalypsoCaCertificateV1Adapter (byte[] cardOutputData, CaCertificateValidatorSpi caCertificateValidator)
+        ~CalypsoCaCertificateV1Adapter (byte[] cardOutputData)
 
         -- **CaCertificateSpi** --
 
@@ -159,14 +162,6 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
 
         +boolean isCaCertificatesAuthenticationAllowed ()
         +boolean isCardCertificatesAuthenticationAllowed ()
-    }
-    ~class "<<CardIdentifier>>\n**final** CardIdentifierAdapter" as CardIdentifierAdapter <<blue>> {
-        ~CardIdentifierAdapter (<back:pink>CardIdentifierApi</back> cardIdentifierApi)
-
-        -- **CardIdentifier** --
-
-        +byte[] getAid ()
-        +byte[] getSerialNumber ()
     }
     ~class "<<<back:gold>CalypsoCertificateApiFactory</back>>>\n**final** CalypsoCertificateApiFactoryAdapter" as CalypsoCertificateApiFactoryAdapter <<blue>> {
         ~CalypsoCertificateApiFactoryAdapter ()
@@ -232,7 +227,6 @@ CalypsoCaCertificateV1ParserAdapter ..> CalypsoCaCertificateV1Adapter #C_LINK : 
 CalypsoCardCertificateV1ParserAdapter ..> CalypsoCardCertificateV1Adapter #C_LINK : create >
 
 CalypsoCardCertificateV1Adapter ..> CardPublicKeyAdapter #C_LINK : create >
-CalypsoCardCertificateV1Adapter ..> CardIdentifierAdapter #C_LINK : create >
 
 CalypsoCertificateApiFactoryAdapter ..> CalypsoCertificateStoreAdapter #C_LINK : provide >
 CalypsoCertificateApiFactoryAdapter ...> CalypsoCaCertificateV1GeneratorAdapter #C_LINK : create >
