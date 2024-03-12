@@ -178,6 +178,7 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         -- **CalypsoCertificateStore** --
 
         +<back:gold>CalypsoCertificateStore</back> addPcaPublicKey (byte[] pcaPublicKeyReference, <back:yellow>RSAPublicKey</back> pcaPublicKey)
+        +<back:gold>CalypsoCertificateStore</back> addPcaPublicKey (byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus)
         +<back:gold>CalypsoCertificateStore</back> addCalypsoCaCertificate (byte[] caCertificate)
     }
     ~class "<<<back:gold>CalypsoCaCertificateV1Generator</back>>>\n**final** CalypsoCaCertificateV1GeneratorAdapter" as CalypsoCaCertificateV1GeneratorAdapter <<blue>> {
