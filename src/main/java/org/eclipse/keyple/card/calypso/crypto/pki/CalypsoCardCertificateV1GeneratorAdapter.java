@@ -25,7 +25,7 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificat
  *
  * @since 0.1.0
  */
-class CalypsoCardCertificateV1GeneratorAdapter implements CalypsoCardCertificateV1Generator {
+final class CalypsoCardCertificateV1GeneratorAdapter implements CalypsoCardCertificateV1Generator {
 
   private final CaCertificateContentSpi issuerCertificate;
   private final CalypsoCertificateSignerSpi cardCertificateSigner;
@@ -37,6 +37,13 @@ class CalypsoCardCertificateV1GeneratorAdapter implements CalypsoCardCertificate
   private byte[] startupInfo;
   private int index;
 
+  /**
+   * Constructor.
+   *
+   * @param issuerPublicKeyReference The certificate public key reference.
+   * @param cardCertificateSigner The signer to use to generate the signature.
+   * @since 0.1.0
+   */
   CalypsoCardCertificateV1GeneratorAdapter(
       byte[] issuerPublicKeyReference, CalypsoCertificateSignerSpi cardCertificateSigner) {
 
@@ -155,43 +162,45 @@ class CalypsoCardCertificateV1GeneratorAdapter implements CalypsoCardCertificate
    */
   @Override
   public byte[] generate() {
-    ByteBuffer buffer =
-        ByteBuffer.allocate(CalypsoCardCertificateV1Adapter.CERTIFICATE_RAW_DATA_SIZE);
+    ByteBuffer certificateRawData =
+        ByteBuffer.allocate(CertificatesConstants.CARD_CERTIFICATE_RAW_DATA_SIZE);
 
     // Type
-    buffer.put(CalypsoCardCertificateV1Adapter.CERTIFICATE_TYPE_BYTE);
+    certificateRawData.put(CertificatesConstants.CARD_CERTIFICATE_TYPE_BYTE);
     // Version
-    buffer.put(CalypsoCardCertificateV1Adapter.CERTIFICATE_VERSION_BYTE);
+    certificateRawData.put(CertificatesConstants.CARD_CERTIFICATE_VERSION_BYTE);
     // Issuer reference
-    buffer.put(issuerCertificate.getPublicKeyReference());
+    certificateRawData.put(issuerCertificate.getPublicKeyReference());
     // AID length
-    buffer.put(aid != null ? (byte) aid.length : (byte) 0xFF);
+    certificateRawData.put(aid != null ? (byte) aid.length : (byte) 0xFF);
     // AID
     if (aid != null) {
-      buffer.put(aid);
+      certificateRawData.put(aid);
       // Calculate the remaining space to fill with zeros
       int remainingLength = 16 - aid.length;
       if (remainingLength > 0) {
         byte[] padding = new byte[remainingLength];
-        buffer.put(padding);
+        certificateRawData.put(padding);
       }
     } else {
       // If AID is not present, fill the entire 16-byte space with zeros
       byte[] padding = new byte[16];
-      buffer.put(padding);
+      certificateRawData.put(padding);
     }
     // Serial number
-    buffer.put(serialNumber);
+    certificateRawData.put(serialNumber);
     // Index
-    buffer.put(ByteArrayUtil.extractBytes(index, 4));
+    certificateRawData.put(ByteArrayUtil.extractBytes(index, 4));
 
     // Prepare recoverable data section
     ByteBuffer recoverableBuffer =
-        ByteBuffer.allocate(CalypsoCardCertificateV1Adapter.RECOVERED_DATA_SIZE);
+        ByteBuffer.allocate(CertificatesConstants.CARD_CERTIFICATE_RECOVERED_DATA_SIZE);
     // Start date
-    recoverableBuffer.put(ByteArrayUtil.extractBytes(startDateBcd, 4));
+    recoverableBuffer.put(
+        ByteArrayUtil.extractBytes(startDateBcd, CertificatesConstants.VALIDITY_DATE_SIZE));
     // End date
-    recoverableBuffer.put(ByteArrayUtil.extractBytes(endDateBcd, 4));
+    recoverableBuffer.put(
+        ByteArrayUtil.extractBytes(endDateBcd, CertificatesConstants.VALIDITY_DATE_SIZE));
     // Startup info
     recoverableBuffer.put(startupInfo);
     // Card public key
@@ -199,6 +208,6 @@ class CalypsoCardCertificateV1GeneratorAdapter implements CalypsoCardCertificate
 
     // Generate the final certificate from the data and recoverable data
     return cardCertificateSigner.generateSignedCertificate(
-        buffer.array(), recoverableBuffer.array());
+        certificateRawData.array(), recoverableBuffer.array());
   }
 }

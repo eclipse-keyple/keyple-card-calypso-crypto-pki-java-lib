@@ -23,7 +23,7 @@ import org.eclipse.keypop.calypso.certificate.spi.CalypsoCertificateSignerSpi;
  *
  * @since 0.1.0
  */
-class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateApiFactory {
+final class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateApiFactory {
 
   /**
    * {@inheritDoc}

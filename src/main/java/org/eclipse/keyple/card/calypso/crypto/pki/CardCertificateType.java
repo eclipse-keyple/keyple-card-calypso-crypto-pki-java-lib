@@ -14,15 +14,15 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
 /**
  * Enumerates the supported types of card certificates.
  *
- * <p>Currently only supports CALYPSO_V1.
+ * <p>Currently only supports CALYPSO.
  *
  * @since 0.1.0
  */
 public enum CardCertificateType {
   /**
-   * Represents the CALYPSO_V1 card certificate type.
+   * Represents the CALYPSO card certificate type.
    *
    * @since 0.1.0
    */
-  CALYPSO_V1
+  CALYPSO
 }

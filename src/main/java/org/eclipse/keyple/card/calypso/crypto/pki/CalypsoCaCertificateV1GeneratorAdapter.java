@@ -12,8 +12,11 @@
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Arrays;
 import org.eclipse.keyple.core.util.Assert;
+import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.eclipse.keypop.calypso.certificate.CalypsoCaCertificateV1Generator;
 import org.eclipse.keypop.calypso.certificate.spi.CalypsoCertificateSignerSpi;
 
@@ -22,8 +25,10 @@ import org.eclipse.keypop.calypso.certificate.spi.CalypsoCertificateSignerSpi;
  *
  * @since 0.1.0
  */
-class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertificateV1Generator {
+final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertificateV1Generator {
 
+  private final byte[] issuerPublicKeyReference;
+  private final CalypsoCertificateSignerSpi caCertificateSigner;
   private RSAPublicKey caPublicKey;
   private byte[] caPublicKeyReference;
   private long startDateBcd;
@@ -33,8 +38,18 @@ class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertificateV1Ge
   private byte caRights;
   private byte caScope;
 
+  /**
+   * Constructor.
+   *
+   * @param issuerPublicKeyReference The certificate public key reference.
+   * @param caCertificateSigner The signer to use to generate the signature.
+   * @since 0.1.0
+   */
   CalypsoCaCertificateV1GeneratorAdapter(
-      byte[] issuerPublicKeyReference, CalypsoCertificateSignerSpi caCertificateSigner) {}
+      byte[] issuerPublicKeyReference, CalypsoCertificateSignerSpi caCertificateSigner) {
+    this.issuerPublicKeyReference = issuerPublicKeyReference;
+    this.caCertificateSigner = caCertificateSigner;
+  }
 
   /**
    * {@inheritDoc}
@@ -136,70 +151,45 @@ class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertificateV1Ge
    */
   @Override
   public byte[] generate() {
-    return null;
-  }
+    ByteBuffer certificateRawData =
+        ByteBuffer.allocate(CertificatesConstants.CA_CERTIFICATE_RAW_DATA_SIZE);
 
-  /**
-   * @return The CA public key.
-   * @since 0.1.0
-   */
-  RSAPublicKey getCaPublicKey() {
-    return caPublicKey;
-  }
+    // Type
+    certificateRawData.put(CertificatesConstants.CA_CERTIFICATE_TYPE_BYTE);
+    // Version
+    certificateRawData.put(CertificatesConstants.CA_CERTIFICATE_VERSION_BYTE);
+    // Issuer public key reference
+    certificateRawData.put(issuerPublicKeyReference);
+    // Certificate public key reference
+    certificateRawData.put(caPublicKeyReference);
+    // Start date
+    certificateRawData.put(
+        ByteArrayUtil.extractBytes(startDateBcd, CertificatesConstants.VALIDITY_DATE_SIZE));
+    // RFU1
+    certificateRawData.putInt(0);
+    // CA rights
+    certificateRawData.put(caRights);
+    // CA scope
+    certificateRawData.put(caScope);
+    // End date
+    certificateRawData.put(
+        ByteArrayUtil.extractBytes(endDateBcd, CertificatesConstants.VALIDITY_DATE_SIZE));
+    // Target AID size
+    certificateRawData.put((byte) (aid.length & 0xFF));
+    // Target AID
+    certificateRawData.put(aid);
+    byte[] padding = new byte[CertificatesConstants.AID_SIZE_MAX - aid.length];
+    certificateRawData.put(padding);
+    // Operating mode
+    certificateRawData.put((byte) (isAidTruncationAllowed ? 1 : 0));
 
-  /**
-   * @return The CA public key reference.
-   * @since 0.1.0
-   */
-  byte[] getCaPublicKeyReference() {
-    return caPublicKeyReference;
-  }
+    // Create an array containing the 222 first bytes of the public key
+    byte[] recoverableData =
+        Arrays.copyOf(
+            caPublicKey.getEncoded(), CertificatesConstants.CA_CERTIFICATE_RECOVERED_DATA_SIZE);
 
-  /**
-   * @return The certificate start date.
-   * @since 0.1.0
-   */
-  long getStartDateBcd() {
-    return startDateBcd;
-  }
-
-  /**
-   * @return The certificate end date.
-   * @since 0.1.0
-   */
-  long getEndDateBcd() {
-    return endDateBcd;
-  }
-
-  /**
-   * @return The AID.
-   * @since 0.1.0
-   */
-  byte[] getAid() {
-    return aid;
-  }
-
-  /**
-   * @return true if the AID truncation is allowed.
-   * @since 0.1.0
-   */
-  boolean isAidTruncationAllowed() {
-    return isAidTruncationAllowed;
-  }
-
-  /**
-   * @return The CA rights.
-   * @since 0.1.0
-   */
-  byte getCaRights() {
-    return caRights;
-  }
-
-  /**
-   * @return The CA scope.
-   * @since 0.1.0
-   */
-  byte getCaScope() {
-    return caScope;
+    // Generate the final certificate from the data and recoverable data
+    return caCertificateSigner.generateSignedCertificate(
+        certificateRawData.array(), recoverableData);
   }
 }

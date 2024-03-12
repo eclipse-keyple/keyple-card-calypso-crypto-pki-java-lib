@@ -11,9 +11,8 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import org.eclipse.keyple.card.calypso.crypto.pki.spi.CardCertificateValidatorSpi;
-import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.card.transaction.spi.CardCertificateParser;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertificateParserSpi;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertificateSpi;
 
@@ -23,21 +22,15 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertific
  *
  * @since 0.1.0
  */
-class CalypsoCardCertificateV1ParserAdapter
+final class CalypsoCardCertificateParserAdapter
     implements CardCertificateParser, CardCertificateParserSpi {
-
-  private static final byte CARD_KEY_CERTIFICATE = (byte) 0x91;
-  private final CardCertificateValidatorSpi cardCertificateValidator;
 
   /**
    * Constructor.
    *
-   * @param cardCertificateValidator null if no validator is set.
    * @since 0.1.0 ;
    */
-  CalypsoCardCertificateV1ParserAdapter(CardCertificateValidatorSpi cardCertificateValidator) {
-    this.cardCertificateValidator = cardCertificateValidator;
-  }
+  CalypsoCardCertificateParserAdapter() {}
 
   /**
    * {@inheritDoc}
@@ -46,7 +39,7 @@ class CalypsoCardCertificateV1ParserAdapter
    */
   @Override
   public byte getCertificateType() {
-    return CARD_KEY_CERTIFICATE;
+    return CertificatesConstants.CARD_CERTIFICATE_TYPE_BYTE;
   }
 
   /**
@@ -55,8 +48,8 @@ class CalypsoCardCertificateV1ParserAdapter
    * @since 0.1.0
    */
   @Override
-  public CardCertificateSpi parseCertificate(byte[] cardOutputData) {
-    Assert.getInstance().notNull(cardOutputData, "cardOutputData");
-    return new CalypsoCardCertificateV1Adapter(cardOutputData, cardCertificateValidator);
+  public CardCertificateSpi parseCertificate(byte[] cardOutputData)
+      throws CertificateValidationException {
+    return new CalypsoCardCertificateV1Adapter(cardOutputData);
   }
 }

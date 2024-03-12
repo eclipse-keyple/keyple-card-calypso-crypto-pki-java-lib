@@ -28,6 +28,7 @@ import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.signers.ISO9796d2PSSSigner;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
+import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 
 /**
@@ -36,8 +37,9 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificat
  * @since 0.1.0
  */
 class CryptoUtils {
-  static final int KEY_REFERENCE_SIZE = 29;
-  private static final int RSA_SIGNATURE_SIZE = 256;
+
+  /** Private constructor */
+  private CryptoUtils() {}
 
   /**
    * Ensures that the provided key is a valid RSA 2048 bits public key with a modulus of 65537,
@@ -73,10 +75,12 @@ class CryptoUtils {
    *
    * @param modulus A 256-byte byte array representing the modulus value.
    * @return A non-null {@link RSAPublicKey} instance.
-   * @throws IllegalArgumentException if the provided modulus is not 256 bytes long.
+   * @throws AsymmetricCryptoException if the provided modulus is invalid or if an error occurred
+   *     during the cryptographic operations.
    * @since 0.1.0
    */
-  static RSAPublicKey generateRSAPublicKeyFromModulus(byte[] modulus) {
+  static RSAPublicKey generateRSAPublicKeyFromModulus(byte[] modulus)
+      throws AsymmetricCryptoException {
     // Convert modulus to BigInteger
     BigInteger modulusBigInt = new BigInteger(1, modulus);
 
@@ -89,11 +93,11 @@ class CryptoUtils {
       return (RSAPublicKey)
           keyFactory.generatePublic(new RSAPublicKeySpec(modulusBigInt, publicExponent));
     } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException(e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     } catch (NoSuchProviderException e) {
-      throw new IllegalStateException(e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     } catch (InvalidKeySpecException e) {
-      throw new IllegalStateException(e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     }
   }
 
@@ -117,12 +121,13 @@ class CryptoUtils {
    * @param issuerCertificateContent The certificate content of the issuer, used to extract the
    *     public key for signature verification.
    * @return a byte array containing the recovered message data if the signature is valid.
-   * @throws IllegalStateException If there is an issue with the cryptographic operations.
+   * @throws AsymmetricCryptoException If there is an issue with the cryptographic operations.
    * @throws CertificateConsistencyException If the signature verification fails.
    * @since 0.1.0
    */
   static byte[] checkCertificateSignatureAndRecoverData(
-      byte[] certificate, CaCertificateContentSpi issuerCertificateContent) {
+      byte[] certificate, CaCertificateContentSpi issuerCertificateContent)
+      throws AsymmetricCryptoException {
     RSAPublicKey issuerPublicKey = (RSAPublicKey) issuerCertificateContent.getPublicKey();
     RSAKeyParameters pubParams =
         new RSAKeyParameters(
@@ -136,9 +141,11 @@ class CryptoUtils {
     try {
       pssSign.updateWithRecoveredMessage(
           Arrays.copyOfRange(
-              certificate, certificate.length - RSA_SIGNATURE_SIZE, certificate.length));
+              certificate,
+              certificate.length - CertificatesConstants.RSA_SIGNATURE_SIZE,
+              certificate.length));
     } catch (InvalidCipherTextException e) {
-      throw new IllegalStateException(e.getMessage(), e);
+      throw new AsymmetricCryptoException(e.getMessage(), e);
     }
 
     pssSign.update(certificate, 0, certificate.length - 256);

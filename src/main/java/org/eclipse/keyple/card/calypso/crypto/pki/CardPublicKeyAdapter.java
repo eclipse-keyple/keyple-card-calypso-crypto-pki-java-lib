@@ -18,7 +18,8 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardPublicKe
  *
  * @since 0.1.0
  */
-class CardPublicKeyAdapter implements CardPublicKeySpi {
+final class CardPublicKeyAdapter implements CardPublicKeySpi {
+
   private final byte[] publicKeyRawValue;
 
   /**

@@ -13,6 +13,7 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import java.security.PublicKey;
 import org.eclipse.keypop.calypso.card.transaction.spi.PcaCertificate;
+import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.PcaCertificateSpi;
 
@@ -21,7 +22,8 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.PcaCertifica
  *
  * @since 0.1.0
  */
-class PcaCertificateAdapter implements PcaCertificate, PcaCertificateSpi, CaCertificateContentSpi {
+final class PcaCertificateAdapter
+    implements PcaCertificate, PcaCertificateSpi, CaCertificateContentSpi {
 
   private final byte[] pcaPublicKeyReference;
   private final PublicKey pcaPublicKey;
@@ -43,11 +45,16 @@ class PcaCertificateAdapter implements PcaCertificate, PcaCertificateSpi, CaCert
    *
    * @param pcaPublicKeyReference The public key reference.
    * @param pcaPublicKeyModulus The public key modulus.
+   * @throws IllegalArgumentException If the provided data is invalid.
    * @since 0.1.0
    */
   PcaCertificateAdapter(byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus) {
     this.pcaPublicKeyReference = pcaPublicKeyReference;
-    this.pcaPublicKey = CryptoUtils.generateRSAPublicKeyFromModulus(pcaPublicKeyModulus);
+    try {
+      this.pcaPublicKey = CryptoUtils.generateRSAPublicKeyFromModulus(pcaPublicKeyModulus);
+    } catch (AsymmetricCryptoException e) {
+      throw new IllegalArgumentException(e.getMessage(), e);
+    }
   }
 
   /**
@@ -132,7 +139,7 @@ class PcaCertificateAdapter implements PcaCertificate, PcaCertificateSpi, CaCert
   @Override
   public byte[] getAid() {
     // no AID for a PCA certificate
-    return null;
+    return null; // NOSONAR
   }
 
   /**

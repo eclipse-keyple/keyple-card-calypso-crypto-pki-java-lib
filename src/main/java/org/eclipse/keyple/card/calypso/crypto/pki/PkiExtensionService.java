@@ -14,12 +14,11 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
 import java.security.PublicKey;
 import java.security.Security;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.eclipse.keyple.card.calypso.crypto.pki.spi.CaCertificateValidatorSpi;
-import org.eclipse.keyple.card.calypso.crypto.pki.spi.CardCertificateValidatorSpi;
 import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.card.transaction.spi.*;
 import org.eclipse.keypop.calypso.certificate.CalypsoCertificateApiFactory;
 import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 
 /**
  * Extension service dedicated to the management of Calypso PKI card transaction and certificate
@@ -32,6 +31,10 @@ public class PkiExtensionService {
   /** Singleton */
   private static final PkiExtensionService INSTANCE = new PkiExtensionService();
 
+  private boolean isTestMode = false;
+  private boolean isTestModeFinalized = false;
+
+  // Add BouncyCastle provider to support RSA PSS signing not available in standard Java.
   static {
     Security.addProvider(new BouncyCastleProvider());
   }
@@ -47,6 +50,28 @@ public class PkiExtensionService {
   }
 
   /**
+   * Sets the system in test mode.
+   *
+   * <p>In test mode, the system allows the use of test certificates.
+   *
+   * <p>Note that enabling test mode should only be done in testing and development environments. It
+   * should not be used in production as it may compromise system security or integrity.
+   *
+   * <p>The test mode can be set only just after the creation of the instance, this means that as
+   * soon as one of the class's other methods is called, the call to this method will generate an
+   * exception {@link IllegalStateException}.
+   *
+   * @since 0.1.0
+   */
+  public void setTestMode() {
+    if (isTestModeFinalized) {
+      throw new IllegalStateException("Test mode must be set first.");
+    }
+    isTestMode = true;
+    isTestModeFinalized = true;
+  }
+
+  /**
    * Creates a factory for asymmetric crypto card transaction managers.
    *
    * @return A not null reference.
@@ -54,6 +79,7 @@ public class PkiExtensionService {
    */
   public AsymmetricCryptoCardTransactionManagerFactory
       createAsymmetricCryptoCardTransactionManagerFactory() {
+    isTestModeFinalized = true; // force test mode to be set first
     return new AsymmetricCryptoCardTransactionManagerFactoryAdapter();
   }
 
@@ -71,6 +97,7 @@ public class PkiExtensionService {
     Assert.getInstance()
         .notNull(pcaPublicKeyReference, "pcaPublicKeyReference")
         .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length");
+    isTestModeFinalized = true; // force test mode to be set first
     CryptoUtils.checkRSA2048PublicKey(pcaPublicKey);
     return new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKey);
   }
@@ -90,6 +117,7 @@ public class PkiExtensionService {
         .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length")
         .notNull(pcaPublicKeyModulus, "pcaPublicKeyModulus")
         .isEqual(pcaPublicKeyModulus.length, 256, "pcaPublicKeyModulus length");
+    isTestModeFinalized = true; // force test mode to be set first
     return new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKeyModulus);
   }
 
@@ -108,34 +136,22 @@ public class PkiExtensionService {
    * @since 0.1.0
    */
   public CaCertificate createCaCertificate(byte[] caCertificate) {
-    return createCaCertificate(caCertificate, null);
-  }
-
-  /**
-   * Creates a Certificate Authority (CA) certificate from raw data provided as a byte array and
-   * performs validation.
-   *
-   * <p>This method takes a raw byte array representation of a CA certificate and attempts to parse
-   * it into a usable {@link CaCertificate} object.
-   *
-   * <p>A {@link CaCertificateValidatorSpi} is used to perform validation checks on the certificate
-   * data beyond basic parsing and certificate's signature verification. This validator is used to
-   * verify the period, issuer validity and any other custom criteria.
-   *
-   * @param caCertificate The 384-byte byte array containing the CA certificate data.
-   * @param caCertificateValidator Validator for certificate checks.
-   * @return A not null reference.
-   * @throws IllegalArgumentException If the provided `caCertificate` is `null` or empty.
-   * @throws CertificateConsistencyException If the certificate fails validation with the provided
-   *     validator.
-   * @since 0.1.0
-   */
-  public CaCertificate createCaCertificate(
-      byte[] caCertificate, CaCertificateValidatorSpi caCertificateValidator) {
     Assert.getInstance()
         .notNull(caCertificate, "caCertificate")
-        .isEqual(caCertificate.length, 384, "caCertificate length");
-    return new CalypsoCaCertificateV1Adapter(caCertificate, caCertificateValidator);
+        .isEqual(
+            caCertificate.length,
+            CertificatesConstants.CA_CERTIFICATE_RAW_DATA_SIZE,
+            "caCertificate length")
+        .isEqual(
+            (int) caCertificate[0],
+            CertificatesConstants.CA_CERTIFICATE_TYPE_BYTE,
+            "caCertificate type");
+    isTestModeFinalized = true; // force test mode to be set first
+    try {
+      return new CalypsoCaCertificateV1Adapter(caCertificate);
+    } catch (CertificateValidationException e) {
+      throw new CertificateConsistencyException("Invalid CA certificate" + e.getMessage(), e);
+    }
   }
 
   /**
@@ -154,33 +170,9 @@ public class PkiExtensionService {
    * @since 0.1.0
    */
   public CaCertificateParser createCaCertificateParser(CaCertificateType caCertificateType) {
-    return createCaCertificateParser(caCertificateType, null);
-  }
-
-  /**
-   * Creates a {@link CaCertificateParser} object specifically tailored to parse the given CA
-   * certificate type.
-   *
-   * <p>This method selects and instantiates the appropriate {@link CaCertificateParser}
-   * implementation based on the provided {@link CaCertificateType}. This ensures that the parser is
-   * capable of handling the specific format and structure of the certificate type, enabling
-   * accurate parsing and data extraction.
-   *
-   * <p>A {@link CaCertificateValidatorSpi} is used to perform validation checks on the certificate
-   * data beyond basic parsing and certificate's signature verification. This validator is used to
-   * verify the period, issuer validity and any other custom criteria.
-   *
-   * @param caCertificateType The type of CA certificate to be parsed, indicating the expected
-   *     format and structure.
-   * @param caCertificateValidator Validator for certificate checks.
-   * @return A not null reference.
-   * @throws UnsupportedOperationException If the specified type is not supported by this factory.
-   * @since 0.1.0
-   */
-  public CaCertificateParser createCaCertificateParser(
-      CaCertificateType caCertificateType, CaCertificateValidatorSpi caCertificateValidator) {
-    if (caCertificateType == CaCertificateType.CALYPSO_V1) {
-      return new CalypsoCaCertificateV1ParserAdapter(caCertificateValidator);
+    isTestModeFinalized = true; // force test mode to be set first
+    if (caCertificateType == CaCertificateType.CALYPSO) {
+      return new CalypsoCaCertificateParserAdapter();
     }
     throw new UnsupportedOperationException(
         "Unsupported CA certificate type: " + caCertificateType);
@@ -203,34 +195,9 @@ public class PkiExtensionService {
    */
   public CardCertificateParser createCardCertificateParser(
       CardCertificateType cardCertificateType) {
-    return createCardCertificateParser(cardCertificateType, null);
-  }
-
-  /**
-   * Creates a {@link CardCertificateParser} object specifically tailored to parse the given card
-   * certificate type.
-   *
-   * <p>This method selects and instantiates the appropriate {@link CardCertificateParser}
-   * implementation based on the provided {@link CardCertificateType}. This ensures that the parser
-   * is capable of handling the specific format and structure of the certificate type, enabling
-   * accurate parsing and data extraction.
-   *
-   * <p>A {@link CardCertificateValidatorSpi} is used to perform validation checks on the
-   * certificate data beyond basic parsing and certificate's signature verification. This validator
-   * is used to verify the period, issuer validity and any other custom criteria.
-   *
-   * @param cardCertificateType The type of card certificate to be parsed, indicating the expected
-   *     format and structure.
-   * @param cardCertificateValidator Validator for certificate checks.
-   * @return A not null reference.
-   * @throws UnsupportedOperationException If the specified type is not supported by this factory.
-   * @since 0.1.0
-   */
-  public CardCertificateParser createCardCertificateParser(
-      CardCertificateType cardCertificateType,
-      CardCertificateValidatorSpi cardCertificateValidator) {
-    if (cardCertificateType == CardCertificateType.CALYPSO_V1) {
-      return new CalypsoCardCertificateV1ParserAdapter(cardCertificateValidator);
+    isTestModeFinalized = true; // force test mode to be set first
+    if (cardCertificateType == CardCertificateType.CALYPSO) {
+      return new CalypsoCardCertificateParserAdapter();
     }
     throw new UnsupportedOperationException(
         "Unsupported card certificate type: " + cardCertificateType);
@@ -243,6 +210,17 @@ public class PkiExtensionService {
    * @since 0.1.0
    */
   public CalypsoCertificateApiFactory getCalypsoCertificateApiFactory() {
+    isTestModeFinalized = true; // force test mode to be set first
     return new CalypsoCertificateApiFactoryAdapter();
+  }
+
+  /**
+   * Checks if the system is in test mode.
+   *
+   * @return true if the system is in test mode, false otherwise.
+   * @since 0.1.0
+   */
+  boolean isTestMode() {
+    return isTestMode;
   }
 }

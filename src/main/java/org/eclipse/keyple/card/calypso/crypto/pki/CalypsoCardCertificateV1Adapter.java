@@ -11,103 +11,120 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import static org.eclipse.keyple.card.calypso.crypto.pki.CryptoUtils.KEY_REFERENCE_SIZE;
+import static org.eclipse.keyple.card.calypso.crypto.pki.CertificatesConstants.KEY_REFERENCE_SIZE;
 
-import java.util.Arrays;
-import org.eclipse.keyple.card.calypso.crypto.pki.spi.CardCertificateValidatorSpi;
+import java.nio.ByteBuffer;
 import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CardCertificate;
 import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
-import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CardIdentifierApi;
+import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertificateSpi;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardPublicKeySpi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Adapter of {@link CardCertificateSpi} for Calypso V1-compliant card certificates.
  *
  * @since 0.1.0
  */
-class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCertificateSpi {
-  static final int CERTIFICATE_RAW_DATA_SIZE = 316;
-  static final byte CERTIFICATE_TYPE_BYTE = (byte) 0x91;
-  static final byte CERTIFICATE_VERSION_BYTE = 1;
-  static final int CERTIFICATE_TYPE_OFFSET = 0;
-  static final int CERTIFICATE_VERSION_OFFSET = 1;
-  static final int ISSUER_KEY_REFERENCE_OFFSET = 2;
-  static final int CARD_AID_SIZE_OFFSET = ISSUER_KEY_REFERENCE_OFFSET + KEY_REFERENCE_SIZE;
-  static final int CARD_AID_SIZE_SIZE = 1;
-  static final int CARD_AID_VALUE_OFFSET = CARD_AID_SIZE_OFFSET + CARD_AID_SIZE_SIZE;
-  static final int CARD_AID_VALUE_SIZE = 16;
-  static final int CARD_SERIAL_NUMBER_OFFSET = CARD_AID_VALUE_OFFSET + CARD_AID_VALUE_SIZE;
-  static final int CARD_SERIAL_NUMBER_SIZE = 8;
-  static final int CARD_INDEX_OFFSET = CARD_SERIAL_NUMBER_OFFSET + CARD_SERIAL_NUMBER_SIZE;
-  static final int CARD_INDEX_SIZE = 4;
-  static final int RECOVERED_START_DATE_OFFSET = 0;
-  static final int RECOVERED_START_DATE_SIZE = 4;
-  static final int RECOVERED_END_DATE_OFFSET =
-      RECOVERED_START_DATE_OFFSET + RECOVERED_START_DATE_SIZE;
-  static final int RECOVERED_END_DATE_SIZE = 4;
-  static final int RECOVERED_CARD_RIGHTS_OFFSET =
-      RECOVERED_END_DATE_OFFSET + RECOVERED_END_DATE_SIZE;
-  static final int RECOVERED_CARD_RIGHTS_SIZE = 1;
-  static final int RECOVERED_CARD_INFO_OFFSET =
-      RECOVERED_CARD_RIGHTS_OFFSET + RECOVERED_CARD_RIGHTS_SIZE;
-  static final int RECOVERED_CARD_INFO_SIZE = 7;
-  static final int RECOVERED_CARD_RFU_OFFSET =
-      RECOVERED_CARD_INFO_OFFSET + RECOVERED_CARD_INFO_SIZE;
-  static final int RECOVERED_CARD_RFU_SIZE = 18;
-  static final int RECOVERED_ECC_PUBLIC_KEY_OFFSET =
-      RECOVERED_CARD_RFU_OFFSET + RECOVERED_CARD_RFU_SIZE;
-  static final int RECOVERED_ECC_PUBLIC_KEY_SIZE = 64;
-  static final int RECOVERED_DATA_SIZE = 222;
-  private final byte[] certificateRawData;
-  private final CardCertificateValidatorSpi cardCertificateValidator;
-  // TODO Clean up this:
-  // private final byte type;
-  // private final byte structureVersion;
+final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCertificateSpi {
+
+  private static final Logger logger =
+      LoggerFactory.getLogger(CalypsoCardCertificateV1Adapter.class);
+
+  private static final String MSG_CERTIFICATE_AID_MISMATCH_PARENT_CERTIFICATE_AID =
+      "Certificate AID mismatch parent certificate AID";
+
+  private final ByteBuffer certificateRawData;
   private final byte[] issuerKeyReference;
-  private final byte cardAidSize;
   private final byte[] cardAidValue;
   private final byte[] cardSerialNumber;
-  // private final int cardIndex;
   private long recoveredStartDate;
   private long recoveredEndDate;
-  // private byte recoveredCardRights;
-  // private byte[] recoveredCardInfo;
-  private byte[] recoveredEccPublicKey;
 
   /**
    * Creates a new instance from the data returned by the card.
    *
    * @param cardOutputData The raw data obtained from the card.
-   * @param cardCertificateValidator The card certificate validator, may be null.
    * @throws IllegalArgumentException If the provided data length is not 384 bytes.
+   * @throws CertificateValidationException If there is an error during certificate validation.
    * @since 0.1.0
    */
-  CalypsoCardCertificateV1Adapter(
-      byte[] cardOutputData, CardCertificateValidatorSpi cardCertificateValidator) {
+  CalypsoCardCertificateV1Adapter(byte[] cardOutputData) throws CertificateValidationException {
     Assert.getInstance()
-        .isEqual(cardOutputData.length, CERTIFICATE_RAW_DATA_SIZE, "cardOutputData size");
-    certificateRawData = cardOutputData;
-    this.cardCertificateValidator = cardCertificateValidator;
+        .isEqual(
+            cardOutputData.length,
+            CertificatesConstants.CARD_CERTIFICATE_RAW_DATA_SIZE,
+            "cardOutputData size");
 
-    issuerKeyReference =
-        Arrays.copyOfRange(
-            cardOutputData,
-            ISSUER_KEY_REFERENCE_OFFSET,
-            ISSUER_KEY_REFERENCE_OFFSET + KEY_REFERENCE_SIZE);
-    cardAidSize = cardOutputData[CARD_AID_SIZE_OFFSET];
-    cardAidValue =
-        Arrays.copyOfRange(
-            cardOutputData, CARD_AID_VALUE_OFFSET, CARD_AID_VALUE_OFFSET + CARD_AID_VALUE_SIZE);
-    cardSerialNumber =
-        Arrays.copyOfRange(
-            cardOutputData,
-            CARD_SERIAL_NUMBER_OFFSET,
-            CARD_SERIAL_NUMBER_OFFSET + CARD_SERIAL_NUMBER_SIZE);
+    // Wrap the card output data and keep it for later use
+    certificateRawData = ByteBuffer.wrap(cardOutputData);
+
+    // Type
+    certificateRawData.position(
+        certificateRawData.position()
+            + CertificatesConstants.CA_TYPE_SIZE); // skip type, already checked
+
+    // Version
+    checkVersion(certificateRawData.get());
+
+    // Issuer key reference
+    issuerKeyReference = new byte[KEY_REFERENCE_SIZE];
+    certificateRawData.get(issuerKeyReference);
+
+    // Get AID
+    cardAidValue = checkAndGetAidValue(certificateRawData);
+
+    // Get serial number
+    cardSerialNumber = new byte[CertificatesConstants.CARD_SERIAL_NUMBER_SIZE];
+    certificateRawData.get(cardSerialNumber);
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Calypso card certificate V1");
+      logger.debug("Target public key reference {}", HexUtil.toHex(issuerKeyReference));
+      logger.debug("Card AID: {}", HexUtil.toHex(cardAidValue));
+      logger.debug("Card serial number: {}", HexUtil.toHex(cardSerialNumber));
+    }
+  }
+
+  /**
+   * Checks the version of a certificate.
+   *
+   * @param version The version byte of the certificate
+   * @throws CertificateValidationException If the certificate version is invalid
+   */
+  private void checkVersion(byte version) throws CertificateValidationException {
+    if (version != CertificatesConstants.CARD_CERTIFICATE_VERSION_BYTE) {
+      // it makes no sense to parse the remaining data
+      throw new CertificateValidationException(
+          "Invalid certificate version: " + HexUtil.toHex(version));
+    }
+  }
+
+  /**
+   * Checks and gets the target AID value based on the given buffer.
+   *
+   * @param buffer The ByteBuffer containing the certificate data.
+   * @return The target AID value as a byte array.
+   * @throws CertificateValidationException If the target AID size is invalid.
+   */
+  private byte[] checkAndGetAidValue(ByteBuffer buffer) throws CertificateValidationException {
+    byte cardAidSize = buffer.get();
+    if (cardAidSize >= CertificatesConstants.AID_SIZE_MIN
+        && cardAidSize <= CertificatesConstants.AID_SIZE_MAX) {
+      byte[] aid = new byte[cardAidSize];
+      buffer.get(aid);
+      buffer.position(buffer.position() + cardAidSize); // Move buffer position after reading AID
+      return aid;
+    } else {
+      throw new CertificateValidationException(
+          "Bad target AID size: " + cardAidSize + ", expected between 5 and 16");
+    }
   }
 
   /**
@@ -126,142 +143,150 @@ class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCertificat
    * @since 0.1.0
    */
   @Override
-  public CardPublicKeySpi checkCertificateAndGetPublicKey(
-      CaCertificateContentSpi issuerCertificateContent, CardIdentifierApi cardIdentifierApi) {
-    byte[] recoveredData =
-        CryptoUtils.checkCertificateSignatureAndRecoverData(
-            certificateRawData, issuerCertificateContent);
-    parseRecoveredData(recoveredData);
-    checkCertificateConsistency(cardIdentifierApi, issuerCertificateContent);
-    return new CardPublicKeyAdapter(recoveredEccPublicKey);
+  public byte[] getCardAid() {
+    return cardAidValue;
   }
 
   /**
-   * Parses the recovered data obtained from the card.
+   * {@inheritDoc}
    *
-   * @param recoveredData The recovered data obtained from the card.
+   * @since 0.1.0
    */
-  private void parseRecoveredData(byte[] recoveredData) {
+  @Override
+  public byte[] getCardSerialNumber() {
+    return cardSerialNumber;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
+  @Override
+  public CardPublicKeySpi checkCertificateAndGetPublicKey(
+      CaCertificateContentSpi issuerCertificateContent)
+      throws CertificateValidationException, AsymmetricCryptoException {
+
+    ByteBuffer recoveredData =
+        ByteBuffer.wrap(
+            CryptoUtils.checkCertificateSignatureAndRecoverData(
+                certificateRawData.array(), issuerCertificateContent));
+
+    // Start date
+    byte[] dateBytes = new byte[CertificatesConstants.VALIDITY_DATE_SIZE];
+    recoveredData.get(dateBytes);
     recoveredStartDate =
-        ByteArrayUtil.extractLong(
-            recoveredData, RECOVERED_START_DATE_OFFSET, RECOVERED_START_DATE_SIZE, false);
+        ByteArrayUtil.extractLong(dateBytes, 0, CertificatesConstants.VALIDITY_DATE_SIZE, false);
+
+    // End date
+    recoveredData.get(dateBytes);
     recoveredEndDate =
-        ByteArrayUtil.extractLong(
-            recoveredData, RECOVERED_END_DATE_OFFSET, RECOVERED_END_DATE_SIZE, false);
-    recoveredEccPublicKey =
-        Arrays.copyOfRange(
-            recoveredData,
-            RECOVERED_ECC_PUBLIC_KEY_OFFSET,
-            RECOVERED_ECC_PUBLIC_KEY_OFFSET + RECOVERED_ECC_PUBLIC_KEY_SIZE);
+        ByteArrayUtil.extractLong(dateBytes, 0, CertificatesConstants.VALIDITY_DATE_SIZE, false);
+
+    // Card certificate rights and card startup info
+    recoveredData.position(
+        recoveredData.position()
+            + CertificatesConstants.CARD_CERTIFICATE_RIGHT_SIZE
+            + CertificatesConstants
+                .CARD_CERTIFICATE_RECOVERED_CARD_INFO_SIZE); // skip card certificates rights and
+    // startup info
+
+    // Card certificate RFU
+    recoveredData.position(
+        recoveredData.position()
+            + CertificatesConstants.CARD_CERTIFICATE_RFU_SIZE); // skip card certificates RFU
+
+    // Card ECC public key
+    byte[] recoveredEccPublicKey =
+        new byte[CertificatesConstants.CARD_CERTIFICATE_RECOVERED_ECC_PUBLIC_KEY_SIZE];
+    recoveredData.get(recoveredEccPublicKey);
+
+    checkCertificateConsistency(issuerCertificateContent);
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Start date: {}", HexUtil.toHex(recoveredStartDate));
+      logger.debug("End date: {}", HexUtil.toHex(recoveredEndDate));
+    }
+
+    return new CardPublicKeyAdapter(recoveredEccPublicKey);
   }
 
   /**
    * Analyzes the certificate's fields to detect inconsistencies.
    *
-   * <p>This method performs a check of the certificate's integrity and validity. If a {@link
-   * CardCertificateValidatorSpi} implementation is set, this method delegates the entire validation
-   * process to it. Otherwise, it performs a basic consistency check by verifying the card
-   * identification data and the certificate's validity period.
+   * <p>This method performs a check of the certificate's integrity and validity.
    *
-   * @param cardIdentifierApi The API for accessing the card's identification data.
    * @param issuerCertificateContent The CA certificate of the issuer.
    */
-  private void checkCertificateConsistency(
-      CardIdentifierApi cardIdentifierApi, CaCertificateContentSpi issuerCertificateContent) {
-    if (cardCertificateValidator != null) {
-      cardCertificateValidator.isCertificateValid(
-          certificateRawData, new CardIdentifierAdapter(cardIdentifierApi));
-    } else {
-      CryptoUtils.checkCertificateValidityPeriod(recoveredStartDate, recoveredEndDate);
-      checkAidValues(cardIdentifierApi, issuerCertificateContent);
+  private void checkCertificateConsistency(CaCertificateContentSpi issuerCertificateContent)
+      throws CertificateValidationException {
+
+    // Check validity
+    long currentDate = CryptoUtils.getCurrentDateAsBcdLong();
+
+    // Check start date
+    if (recoveredStartDate != 0 && currentDate < recoveredStartDate) {
+      throw new CertificateConsistencyException(
+          "Card certificate not yet valid. Start date: " + HexUtil.toHex(recoveredStartDate));
     }
 
-    checkSerialNumbers(cardIdentifierApi);
+    // Check end date
+    if (recoveredEndDate != 0 && currentDate > recoveredEndDate) {
+      throw new CertificateConsistencyException(
+          "Card certificate expired. End date: " + HexUtil.toHex(recoveredEndDate));
+    }
+
+    // Constraints from the parent certificate
+    // Verify if the parent is allowed to authenticate this certificate
+    checkAuthenticationAllowed(issuerCertificateContent);
+
+    // Verify if the AID is consistent with the parent profile
+    checkAidAgainstParentAid(issuerCertificateContent);
   }
 
   /**
-   * Compares the certificates AID with the card's AID according to the policy defined by the issuer
-   * certificate.
+   * Checks if the issuer certificate is allowed to authenticate a card certificate.
+   *
+   * @param issuerCertificateContent The issuer certificate content.
+   * @throws CertificateValidationException If the issuer certificate is not allowed to authenticate
+   *     a CA certificate.
    */
-  private void checkAidValues(
-      CardIdentifierApi cardIdentifierApi, CaCertificateContentSpi issuerCertificateContent) {
-    // Determine the length of the AID from the API
-    int aidLength = cardIdentifierApi.getAid().length;
-
-    // Ensure the cardAidValue array is at least as long as the API's AID
-    if (cardAidValue.length < aidLength) {
-      throw new CertificateConsistencyException(
-          generateMismatchErrorMessage(
-              "Certificate AID length mismatch", cardIdentifierApi.getAid(), cardAidValue));
+  private static void checkAuthenticationAllowed(CaCertificateContentSpi issuerCertificateContent)
+      throws CertificateValidationException {
+    if (!issuerCertificateContent.isCardCertificatesAuthenticationAllowed()) {
+      throw new CertificateValidationException(
+          "Parent certificate ("
+              + HexUtil.toHex(issuerCertificateContent.getPublicKeyReference())
+              + ") not allowed to authenticate a card certificate");
     }
+  }
 
-    // Create a prefix array from cardAidValue with the length of the AID
-    byte[] cardAidValuePrefix = Arrays.copyOfRange(cardAidValue, 0, aidLength);
+  /**
+   * Checks the AID value of the given issuerCertificateContent against the parent certificate AID.
+   *
+   * @param issuerCertificateContent The issuer certificate content.
+   * @throws CertificateValidationException If the AID values mismatch.
+   */
+  private void checkAidAgainstParentAid(CaCertificateContentSpi issuerCertificateContent)
+      throws CertificateValidationException {
 
-    // Compare the prefix with the entire AID from the API
-    if (!Arrays.equals(cardAidValuePrefix, cardIdentifierApi.getAid())) {
-      throw new CertificateConsistencyException(
-          generateMismatchErrorMessage(
-              "Certificate AID mismatch", cardIdentifierApi.getAid(), cardAidValue));
-    }
     if (issuerCertificateContent.isAidCheckRequested()) {
-      byte[] caTargetAidValue = issuerCertificateContent.getAid();
-      if (issuerCertificateContent.isAidTruncated()) {
-        checkTruncatedAids(caTargetAidValue);
-      } else {
-        checkUntruncatedAids(caTargetAidValue);
+      byte[] issuerAid = issuerCertificateContent.getAid();
+
+      int compareLength =
+          issuerCertificateContent.isAidTruncated() ? issuerAid.length : cardAidValue.length;
+
+      if (cardAidValue.length < compareLength || issuerAid.length < compareLength) {
+        throw new CertificateValidationException(
+            MSG_CERTIFICATE_AID_MISMATCH_PARENT_CERTIFICATE_AID);
+      }
+
+      for (int i = 0; i < compareLength; i++) {
+        if (cardAidValue[i] != issuerAid[i]) {
+          throw new CertificateValidationException(
+              MSG_CERTIFICATE_AID_MISMATCH_PARENT_CERTIFICATE_AID);
+        }
       }
     }
-  }
-
-  /**
-   * Compares the certificate's AID with the issuer certificate's AID when truncation is allowed.
-   */
-  private void checkTruncatedAids(byte[] caTargetAidValue) {
-    // Truncation allowed
-    if (cardAidValue.length >= caTargetAidValue.length) {
-      if (!Arrays.equals(Arrays.copyOf(cardAidValue, caTargetAidValue.length), caTargetAidValue)) {
-        throw new CertificateConsistencyException(
-            generateMismatchErrorMessage(
-                "AID mismatch with truncation allowed",
-                caTargetAidValue,
-                Arrays.copyOf(cardAidValue, caTargetAidValue.length)));
-      }
-    } else {
-      throw new CertificateConsistencyException("Card AID is shorter than CA target AID.");
-    }
-  }
-
-  /**
-   * Compares the certificate's AID with the issuer certificate's AID when truncation is not
-   * allowed.
-   */
-  private void checkUntruncatedAids(byte[] caTargetAidValue) {
-    // Truncation forbidden
-    if (cardAidValue.length == caTargetAidValue.length) {
-      if (!Arrays.equals(cardAidValue, caTargetAidValue)) {
-        throw new CertificateConsistencyException(
-            generateMismatchErrorMessage(
-                "AID mismatch with no truncation allowed", caTargetAidValue, cardAidValue));
-      }
-    } else {
-      throw new CertificateConsistencyException("AID size mismatch with no truncation allowed.");
-    }
-  }
-
-  /** Compares the card's serial number to the serial number found into the certificate. */
-  private void checkSerialNumbers(CardIdentifierApi cardIdentifierApi) {
-    if (!Arrays.equals(cardSerialNumber, cardIdentifierApi.getSerialNumber())) {
-      throw new CertificateConsistencyException(
-          generateMismatchErrorMessage(
-              "Certificate serial number mismatch",
-              cardIdentifierApi.getSerialNumber(),
-              cardSerialNumber));
-    }
-  }
-
-  /** Generates a String dedicated to mismatch error message. */
-  private String generateMismatchErrorMessage(String reason, byte[] expected, byte[] found) {
-    return reason + ": expected " + HexUtil.toHex(expected) + ", but found " + HexUtil.toHex(found);
   }
 }
