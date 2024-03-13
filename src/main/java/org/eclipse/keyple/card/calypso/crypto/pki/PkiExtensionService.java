@@ -98,7 +98,7 @@ public class PkiExtensionService {
         .notNull(pcaPublicKeyReference, "pcaPublicKeyReference")
         .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length");
     isTestModeFinalized = true; // force test mode to be set first
-    CryptoUtils.checkRSA2048PublicKey(pcaPublicKey);
+    CertificateUtils.checkRSA2048PublicKey(pcaPublicKey);
     return new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKey);
   }
 

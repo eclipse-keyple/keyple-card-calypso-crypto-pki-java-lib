@@ -29,17 +29,18 @@ import org.bouncycastle.crypto.signers.ISO9796d2PSSSigner;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 
 /**
- * Provides utility methods for cryptographic operations.
+ * Provides utility methods for field format and cryptographic operations.
  *
  * @since 0.1.0
  */
-class CryptoUtils {
+class CertificateUtils {
 
   /** Private constructor */
-  private CryptoUtils() {}
+  private CertificateUtils() {}
 
   /**
    * Ensures that the provided key is a valid RSA 2048 bits public key with a modulus of 65537,
@@ -240,6 +241,81 @@ class CryptoUtils {
       throw new CertificateConsistencyException(
           "Certificate not yet valid. Start date: " + HexUtil.toHex(startDate));
     }
+    if (endDate != 0 && currentDate > endDate) {
+      throw new CertificateConsistencyException(
+          "Certificate expired. End date: " + HexUtil.toHex(endDate));
+    }
+  }
+
+  /**
+   * Checks the version of a certificate.
+   *
+   * @param expectedVersion The expected version
+   * @param version The version byte of the certificate
+   * @throws CertificateValidationException If the certificate version is invalid
+   * @since 0.1.0
+   */
+  static void checkVersion(byte expectedVersion, byte version)
+      throws CertificateValidationException {
+    if (version != expectedVersion) {
+      // it makes no sense to parse the remaining data
+      throw new CertificateValidationException(
+          "Invalid certificate version: " + HexUtil.toHex(version));
+    }
+  }
+
+  /**
+   * Validates whether the issuer's certificate has the necessary permissions to authenticate
+   * another certificate.
+   *
+   * <p>This method checks if the issuer certificate has the appropriate authorization based on the
+   * type of certificate being authenticated.
+   *
+   * @param isCardCertificate Indicates whether the certificate to be authenticated is a card
+   *     certificate (true) or a CA certificate (false).
+   * @param issuerCertificateContent The issuer certificate content.
+   * @throws CertificateValidationException If the issuer certificate is not allowed to authenticate
+   *     a CA certificate.
+   */
+  static void checkAuthenticationAllowed(
+      boolean isCardCertificate, CaCertificateContentSpi issuerCertificateContent)
+      throws CertificateValidationException {
+    boolean isAllowed =
+        isCardCertificate
+            ? issuerCertificateContent.isCardCertificatesAuthenticationAllowed()
+            : issuerCertificateContent.isCaCertificatesAuthenticationAllowed();
+    if (!isAllowed) {
+      throw new CertificateValidationException(
+          "Parent certificate ("
+              + HexUtil.toHex(issuerCertificateContent.getPublicKeyReference())
+              + ") not allowed to authenticate a "
+              + (isCardCertificate ? "card" : "CA")
+              + "certificate");
+    }
+  }
+
+  /**
+   * Checks if the current date falls within the validity period specified by the start and end
+   * dates.
+   *
+   * @param startDate The start date of the validity period, represented as a long (BCD format). A
+   *     value of 0 indicates no start date.
+   * @param endDate The end date of the validity period, represented as a long (BCD format). A value
+   *     of 0 indicates no end date.
+   * @throws CertificateConsistencyException If the current date is before the start date or after
+   *     the end date.
+   * @since 0.1.0
+   */
+  public static void checkValidity(long startDate, long endDate) {
+    long currentDate = CertificateUtils.getCurrentDateAsBcdLong();
+
+    // Check start date
+    if (startDate != 0 && currentDate < startDate) {
+      throw new CertificateConsistencyException(
+          "Certificate not yet valid. Start date: " + HexUtil.toHex(startDate));
+    }
+
+    // Check end date
     if (endDate != 0 && currentDate > endDate) {
       throw new CertificateConsistencyException(
           "Certificate expired. End date: " + HexUtil.toHex(endDate));

@@ -51,7 +51,7 @@ final class PcaCertificateAdapter
   PcaCertificateAdapter(byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus) {
     this.pcaPublicKeyReference = pcaPublicKeyReference;
     try {
-      this.pcaPublicKey = CryptoUtils.generateRSAPublicKeyFromModulus(pcaPublicKeyModulus);
+      this.pcaPublicKey = CertificateUtils.generateRSAPublicKeyFromModulus(pcaPublicKeyModulus);
     } catch (AsymmetricCryptoException e) {
       throw new IllegalArgumentException(e.getMessage(), e);
     }

@@ -90,7 +90,7 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
         .isInRange(year, 0, 9999, "year")
         .isInRange(month, 1, 99, "month")
         .isInRange(day, 1, 99, "day");
-    startDateBcd = CryptoUtils.convertDateToBcdLong(year, month, day);
+    startDateBcd = CertificateUtils.convertDateToBcdLong(year, month, day);
     return this;
   }
 
@@ -105,7 +105,7 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
         .isInRange(year, 0, 9999, "year")
         .isInRange(month, 1, 99, "month")
         .isInRange(day, 1, 99, "day");
-    endDateBcd = CryptoUtils.convertDateToBcdLong(year, month, day);
+    endDateBcd = CertificateUtils.convertDateToBcdLong(year, month, day);
     return this;
   }
 

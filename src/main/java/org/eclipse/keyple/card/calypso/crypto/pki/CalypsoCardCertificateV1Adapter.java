@@ -18,7 +18,6 @@ import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CardCertificate;
-import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
@@ -71,7 +70,8 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
             + CertificatesConstants.CA_TYPE_SIZE); // skip type, already checked
 
     // Version
-    checkVersion(certificateRawData.get());
+    CertificateUtils.checkVersion(
+        CertificatesConstants.CARD_CERTIFICATE_VERSION_BYTE, certificateRawData.get());
 
     // Issuer key reference
     issuerKeyReference = new byte[KEY_REFERENCE_SIZE];
@@ -89,20 +89,6 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
       logger.debug("Target public key reference {}", HexUtil.toHex(issuerKeyReference));
       logger.debug("Card AID: {}", HexUtil.toHex(cardAidValue));
       logger.debug("Card serial number: {}", HexUtil.toHex(cardSerialNumber));
-    }
-  }
-
-  /**
-   * Checks the version of a certificate.
-   *
-   * @param version The version byte of the certificate
-   * @throws CertificateValidationException If the certificate version is invalid
-   */
-  private void checkVersion(byte version) throws CertificateValidationException {
-    if (version != CertificatesConstants.CARD_CERTIFICATE_VERSION_BYTE) {
-      // it makes no sense to parse the remaining data
-      throw new CertificateValidationException(
-          "Invalid certificate version: " + HexUtil.toHex(version));
     }
   }
 
@@ -169,7 +155,7 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
 
     ByteBuffer recoveredData =
         ByteBuffer.wrap(
-            CryptoUtils.checkCertificateSignatureAndRecoverData(
+            CertificateUtils.checkCertificateSignatureAndRecoverData(
                 certificateRawData.array(), issuerCertificateContent));
 
     // Start date
@@ -222,43 +208,14 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
       throws CertificateValidationException {
 
     // Check validity
-    long currentDate = CryptoUtils.getCurrentDateAsBcdLong();
-
-    // Check start date
-    if (recoveredStartDate != 0 && currentDate < recoveredStartDate) {
-      throw new CertificateConsistencyException(
-          "Card certificate not yet valid. Start date: " + HexUtil.toHex(recoveredStartDate));
-    }
-
-    // Check end date
-    if (recoveredEndDate != 0 && currentDate > recoveredEndDate) {
-      throw new CertificateConsistencyException(
-          "Card certificate expired. End date: " + HexUtil.toHex(recoveredEndDate));
-    }
+    CertificateUtils.checkValidity(recoveredStartDate, recoveredEndDate);
 
     // Constraints from the parent certificate
     // Verify if the parent is allowed to authenticate this certificate
-    checkAuthenticationAllowed(issuerCertificateContent);
+    CertificateUtils.checkAuthenticationAllowed(true, issuerCertificateContent);
 
     // Verify if the AID is consistent with the parent profile
     checkAidAgainstParentAid(issuerCertificateContent);
-  }
-
-  /**
-   * Checks if the issuer certificate is allowed to authenticate a card certificate.
-   *
-   * @param issuerCertificateContent The issuer certificate content.
-   * @throws CertificateValidationException If the issuer certificate is not allowed to authenticate
-   *     a CA certificate.
-   */
-  private static void checkAuthenticationAllowed(CaCertificateContentSpi issuerCertificateContent)
-      throws CertificateValidationException {
-    if (!issuerCertificateContent.isCardCertificatesAuthenticationAllowed()) {
-      throw new CertificateValidationException(
-          "Parent certificate ("
-              + HexUtil.toHex(issuerCertificateContent.getPublicKeyReference())
-              + ") not allowed to authenticate a card certificate");
-    }
   }
 
   /**

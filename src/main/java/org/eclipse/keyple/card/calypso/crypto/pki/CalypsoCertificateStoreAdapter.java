@@ -75,7 +75,7 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
     }
 
     // Check if the RSA public key has the expected characteristics (size and exponent)
-    CryptoUtils.checkRSA2048PublicKey(pcaPublicKey);
+    CertificateUtils.checkRSA2048PublicKey(pcaPublicKey);
 
     // Add a new PCA certificate to the map
     publicKeyReferenceToCaCertificateContentSpi.put(
@@ -107,7 +107,7 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
     // Create a compliant RSA public key with the provided modulus
     RSAPublicKey pcaPublicKey = null;
     try {
-      pcaPublicKey = CryptoUtils.generateRSAPublicKeyFromModulus(pcaPublicKeyModulus);
+      pcaPublicKey = CertificateUtils.generateRSAPublicKeyFromModulus(pcaPublicKeyModulus);
     } catch (AsymmetricCryptoException e) {
       throw new IllegalArgumentException(e.getMessage(), e);
     }

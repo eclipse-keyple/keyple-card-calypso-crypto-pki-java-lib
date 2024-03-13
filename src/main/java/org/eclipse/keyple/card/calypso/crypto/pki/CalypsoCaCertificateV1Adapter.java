@@ -50,7 +50,7 @@ final class CalypsoCaCertificateV1Adapter
   private final boolean isAidTruncated;
   private final byte[] caPublicKeyHeader;
   private final boolean isCardCertificatesAuthenticationAllowed;
-  private final boolean isCACertificatesAuthenticationAllowed;
+  private final boolean isCaCertificatesAuthenticationAllowed;
   private PublicKey caPublicKey;
 
   /**
@@ -71,7 +71,8 @@ final class CalypsoCaCertificateV1Adapter
             + CertificatesConstants.CA_TYPE_SIZE); // skip type, already checked
 
     // Version
-    checkVersion(certificateRawData.get());
+    CertificateUtils.checkVersion(
+        CertificatesConstants.CA_CERTIFICATE_VERSION_BYTE, certificateRawData.get());
 
     // Issuer key reference
     issuerKeyReference = new byte[KEY_REFERENCE_SIZE];
@@ -94,8 +95,10 @@ final class CalypsoCaCertificateV1Adapter
     // CaRights
     byte caRights = certificateRawData.get();
     checkCaRights(caRights);
-    isCardCertificatesAuthenticationAllowed = checkAndGetCardCertAuthenticationCapacity(caRights);
-    isCACertificatesAuthenticationAllowed = checkAndGetCACertAuthenticationCapacity(caRights);
+    isCardCertificatesAuthenticationAllowed =
+        checkAndGetCardCertificateAuthenticationAuthorization(caRights);
+    isCaCertificatesAuthenticationAllowed =
+        checkAndGetCaCertificateAuthenticationAuthorization(caRights);
 
     // CaScope
     checkCaScope(certificateRawData.get());
@@ -130,7 +133,7 @@ final class CalypsoCaCertificateV1Adapter
           isCardCertificatesAuthenticationAllowed ? MSG_ALLOWED : MSG_FORBIDDEN);
       logger.debug(
           "CA certificate authentication: {}",
-          isCACertificatesAuthenticationAllowed ? MSG_ALLOWED : MSG_FORBIDDEN);
+          isCaCertificatesAuthenticationAllowed ? MSG_ALLOWED : MSG_FORBIDDEN);
       logger.debug(
           "Scope: {}", PkiExtensionService.getInstance().isTestMode() ? "test" : "production");
       logger.debug(
@@ -139,20 +142,6 @@ final class CalypsoCaCertificateV1Adapter
       if (caTargetAidValue != null) {
         logger.debug("AID truncation: {}", isAidTruncated ? MSG_ALLOWED : MSG_FORBIDDEN);
       }
-    }
-  }
-
-  /**
-   * Checks the version of a certificate.
-   *
-   * @param version The version byte of the certificate
-   * @throws CertificateValidationException If the certificate version is invalid
-   */
-  private void checkVersion(byte version) throws CertificateValidationException {
-    if (version != CertificatesConstants.CA_CERTIFICATE_VERSION_BYTE) {
-      // it makes no sense to parse the remaining data
-      throw new CertificateValidationException(
-          "Invalid certificate version: " + HexUtil.toHex(version));
     }
   }
 
@@ -171,14 +160,14 @@ final class CalypsoCaCertificateV1Adapter
   }
 
   /**
-   * Checks and gets the card certificate authentication capacity based on the given CA rights.
+   * Checks and gets the card certificate authentication authorization based on the given CA rights.
    *
    * @param caRights The byte representing the rights of the certificate.
    * @return true if card certificate authentication is allowed, false otherwise.
    * @throws CertificateValidationException If the certificate authentication authorization value is
    *     unexpected.
    */
-  private boolean checkAndGetCardCertAuthenticationCapacity(byte caRights)
+  private boolean checkAndGetCardCertificateAuthenticationAuthorization(byte caRights)
       throws CertificateValidationException {
     int rights = (caRights & 0x0C) >> 2;
     if (rights == 1) {
@@ -193,14 +182,14 @@ final class CalypsoCaCertificateV1Adapter
   }
 
   /**
-   * Checks and gets the CA Certificate authentication capacity based on the given CA rights.
+   * Checks and gets the CA Certificate authentication authorization based on the given CA rights.
    *
    * @param caRights The byte representing the rights of the certificate.
    * @return true if CA Certificate authentication is allowed, false otherwise.
    * @throws CertificateValidationException If the certificate authentication authorization value is
    *     unexpected.
    */
-  private boolean checkAndGetCACertAuthenticationCapacity(byte caRights)
+  private boolean checkAndGetCaCertificateAuthenticationAuthorization(byte caRights)
       throws CertificateValidationException {
     int rights = caRights & 0x03;
     if (rights == 1) {
@@ -308,30 +297,18 @@ final class CalypsoCaCertificateV1Adapter
       throws CertificateValidationException, AsymmetricCryptoException {
 
     // Check validity
-    long currentDate = CryptoUtils.getCurrentDateAsBcdLong();
-
-    // Check start date
-    if (startDate != 0 && currentDate < startDate) {
-      throw new CertificateValidationException(
-          "Card certificate not yet valid. Start date: " + HexUtil.toHex(startDate));
-    }
-
-    // Check end date
-    if (endDate != 0 && currentDate > endDate) {
-      throw new CertificateValidationException(
-          "Card certificate expired. End date: " + HexUtil.toHex(endDate));
-    }
+    CertificateUtils.checkValidity(startDate, endDate);
 
     // Constraints from the parent certificate
     // Verify if the parent is allowed to authenticate this certificate
-    checkAuthenticationAllowed(issuerCertificateContent);
+    CertificateUtils.checkAuthenticationAllowed(false, issuerCertificateContent);
 
     // Verify if the AID is consistent with the parent profile
     checkAidAgainstParentAid(issuerCertificateContent);
 
     // Verify the signature and recover the data (the 222 first bytes of public key)
     byte[] recoveredData =
-        CryptoUtils.checkCertificateSignatureAndRecoverData(
+        CertificateUtils.checkCertificateSignatureAndRecoverData(
             certificateRawData.array(), issuerCertificateContent);
 
     // Combines the recovered data and the header transmitted in clear to create the CA public key
@@ -339,26 +316,9 @@ final class CalypsoCaCertificateV1Adapter
     System.arraycopy(caPublicKeyHeader, 0, caPublicKeyModulus, 0, caPublicKeyHeader.length);
     System.arraycopy(
         recoveredData, 0, caPublicKeyModulus, caPublicKeyHeader.length, recoveredData.length);
-    caPublicKey = CryptoUtils.generateRSAPublicKeyFromModulus(caPublicKeyModulus);
+    caPublicKey = CertificateUtils.generateRSAPublicKeyFromModulus(caPublicKeyModulus);
 
     return this;
-  }
-
-  /**
-   * Checks if the issuer certificate is allowed to authenticate a CA certificate.
-   *
-   * @param issuerCertificateContent The issuer certificate content.
-   * @throws CertificateValidationException If the issuer certificate is not allowed to authenticate
-   *     a CA certificate.
-   */
-  private static void checkAuthenticationAllowed(CaCertificateContentSpi issuerCertificateContent)
-      throws CertificateValidationException {
-    if (!issuerCertificateContent.isCaCertificatesAuthenticationAllowed()) {
-      throw new CertificateValidationException(
-          "Parent certificate ("
-              + HexUtil.toHex(issuerCertificateContent.getPublicKeyReference())
-              + ") not allowed to authenticate a CA certificate");
-    }
   }
 
   /**
@@ -466,7 +426,7 @@ final class CalypsoCaCertificateV1Adapter
    */
   @Override
   public boolean isCaCertificatesAuthenticationAllowed() {
-    return isCACertificatesAuthenticationAllowed;
+    return isCaCertificatesAuthenticationAllowed;
   }
 
   /**
