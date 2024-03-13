@@ -11,7 +11,7 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import static org.eclipse.keyple.card.calypso.crypto.pki.CertificatesConstants.KEY_REFERENCE_SIZE;
+import static org.eclipse.keyple.card.calypso.crypto.pki.Constants.KEY_REFERENCE_SIZE;
 
 import java.nio.ByteBuffer;
 import java.security.PublicKey;
@@ -67,12 +67,10 @@ final class CalypsoCaCertificateV1Adapter
 
     // Type
     certificateRawData.position(
-        certificateRawData.position()
-            + CertificatesConstants.CA_TYPE_SIZE); // skip type, already checked
+        certificateRawData.position() + Constants.CA_TYPE_SIZE); // skip type, already checked
 
     // Version
-    CertificateUtils.checkVersion(
-        CertificatesConstants.CA_CERTIFICATE_VERSION_BYTE, certificateRawData.get());
+    CertificateUtils.checkVersion(Constants.CA_CERTIFICATE_VERSION_BYTE, certificateRawData.get());
 
     // Issuer key reference
     issuerKeyReference = new byte[KEY_REFERENCE_SIZE];
@@ -83,14 +81,13 @@ final class CalypsoCaCertificateV1Adapter
     certificateRawData.get(caTargetKeyReference);
 
     // Start date
-    byte[] dateBytes = new byte[CertificatesConstants.VALIDITY_DATE_SIZE];
+    byte[] dateBytes = new byte[Constants.VALIDITY_DATE_SIZE];
     certificateRawData.get(dateBytes);
-    startDate =
-        ByteArrayUtil.extractLong(dateBytes, 0, CertificatesConstants.VALIDITY_DATE_SIZE, false);
+    startDate = ByteArrayUtil.extractLong(dateBytes, 0, Constants.VALIDITY_DATE_SIZE, false);
 
     // RFU1
     certificateRawData.position(
-        certificateRawData.position() + CertificatesConstants.CA_RFU1_SIZE); // skip RFU1
+        certificateRawData.position() + Constants.CA_RFU1_SIZE); // skip RFU1
 
     // CaRights
     byte caRights = certificateRawData.get();
@@ -105,8 +102,7 @@ final class CalypsoCaCertificateV1Adapter
 
     // End date
     certificateRawData.get(dateBytes);
-    endDate =
-        ByteArrayUtil.extractLong(dateBytes, 0, CertificatesConstants.VALIDITY_DATE_SIZE, false);
+    endDate = ByteArrayUtil.extractLong(dateBytes, 0, Constants.VALIDITY_DATE_SIZE, false);
 
     // Check AID target size and create the expected caTargetAidValue
     caTargetAidValue = checkAndGetAidValue(certificateRawData);
@@ -116,10 +112,10 @@ final class CalypsoCaCertificateV1Adapter
 
     // RFU 2
     certificateRawData.position(
-        certificateRawData.position() + CertificatesConstants.CA_RFU2_SIZE); // skip RFU2
+        certificateRawData.position() + Constants.CA_RFU2_SIZE); // skip RFU2
 
     // Public key header
-    caPublicKeyHeader = new byte[CertificatesConstants.CA_PUBLIC_KEY_HEADER_SIZE];
+    caPublicKeyHeader = new byte[Constants.CA_PUBLIC_KEY_HEADER_SIZE];
     certificateRawData.get(caPublicKeyHeader);
 
     if (logger.isDebugEnabled()) {
@@ -243,10 +239,10 @@ final class CalypsoCaCertificateV1Adapter
   private byte[] checkAndGetAidValue(ByteBuffer buffer) throws CertificateValidationException {
     byte caTargetAidSize = buffer.get();
     if (caTargetAidSize == (byte) 0xFF) {
-      buffer.position(buffer.position() + CertificatesConstants.AID_SIZE_MAX);
+      buffer.position(buffer.position() + Constants.AID_SIZE_MAX);
       return null; // no AID NOSONAR
-    } else if (caTargetAidSize >= CertificatesConstants.AID_SIZE_MIN
-        && caTargetAidSize <= CertificatesConstants.AID_SIZE_MAX) {
+    } else if (caTargetAidSize >= Constants.AID_SIZE_MIN
+        && caTargetAidSize <= Constants.AID_SIZE_MAX) {
       byte[] aid = new byte[caTargetAidSize];
       buffer.position(
           buffer.position() + caTargetAidSize); // Move buffer position after reading AID
@@ -312,7 +308,7 @@ final class CalypsoCaCertificateV1Adapter
             certificateRawData.array(), issuerCertificateContent);
 
     // Combines the recovered data and the header transmitted in clear to create the CA public key
-    byte[] caPublicKeyModulus = new byte[CertificatesConstants.RSA_KEY_SIZE];
+    byte[] caPublicKeyModulus = new byte[Constants.RSA_KEY_SIZE];
     System.arraycopy(caPublicKeyHeader, 0, caPublicKeyModulus, 0, caPublicKeyHeader.length);
     System.arraycopy(
         recoveredData, 0, caPublicKeyModulus, caPublicKeyHeader.length, recoveredData.length);

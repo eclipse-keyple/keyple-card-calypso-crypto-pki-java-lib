@@ -1,6 +1,6 @@
 @startuml
 title
-    Keyple - keyple-card-calypso-crypto-pki-java-lib - 0.1.+ (2024-03-08)
+    Keyple - keyple-card-calypso-crypto-pki-java-lib - 0.1.+ (2024-03-13)
 end title
 
 ' == THEME ==
@@ -68,7 +68,7 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
 
         +<back:pink>AsymmetricCryptoCardTransactionManagerFactory</back> createAsymmetricCryptoCardTransactionManagerFactory ()
 
-        +<back:pink>PcaCertificate</back> createPcaCertificate (byte[] pcaPublicKeyReference, <back:yellow>PublicKey</back> pcaPublicKey)
+        +<back:pink>PcaCertificate</back> createPcaCertificate (byte[] pcaPublicKeyReference, <back:yellow>RSAPublicKey</back> pcaPublicKey)
         +<back:pink>PcaCertificate</back> createPcaCertificate (byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus)
 
         +<back:pink>CaCertificate</back> createCaCertificate (byte[] caCertificate)

@@ -39,7 +39,7 @@ final class CalypsoCardCertificateParserAdapter
    */
   @Override
   public byte getCertificateType() {
-    return CertificatesConstants.CARD_CERTIFICATE_TYPE_BYTE;
+    return Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_TYPE_BYTE;
   }
 
   /**

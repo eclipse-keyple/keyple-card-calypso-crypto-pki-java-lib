@@ -11,8 +11,8 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import java.security.PublicKey;
 import java.security.Security;
+import java.security.interfaces.RSAPublicKey;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.card.transaction.spi.*;
@@ -32,7 +32,7 @@ public class PkiExtensionService {
   private static final PkiExtensionService INSTANCE = new PkiExtensionService();
 
   private boolean isTestMode = false;
-  private boolean isTestModeFinalized = false;
+  private boolean isTestModeConfigurable = true;
 
   // Add BouncyCastle provider to support RSA PSS signing not available in standard Java.
   static {
@@ -42,7 +42,7 @@ public class PkiExtensionService {
   /**
    * Returns the service instance.
    *
-   * @return A not null reference.
+   * @return A non-null reference.
    * @since 0.1.0
    */
   public static PkiExtensionService getInstance() {
@@ -52,72 +52,81 @@ public class PkiExtensionService {
   /**
    * Sets the system in test mode.
    *
-   * <p>In test mode, the system allows the use of test certificates.
+   * <p>In test mode, the system requires the use of test certificates.
    *
    * <p>Note that enabling test mode should only be done in testing and development environments. It
    * should not be used in production as it may compromise system security or integrity.
    *
    * <p>The test mode can be set only just after the creation of the instance, this means that as
    * soon as one of the class's other methods is called, the call to this method will generate an
-   * exception {@link IllegalStateException}.
+   * {@link IllegalStateException} exception.
    *
    * @since 0.1.0
    */
   public void setTestMode() {
-    if (isTestModeFinalized) {
-      throw new IllegalStateException("Test mode must be set first.");
+    if (!isTestModeConfigurable) {
+      throw new IllegalStateException("Test mode must be set first");
     }
     isTestMode = true;
-    isTestModeFinalized = true;
+    isTestModeConfigurable = false;
   }
 
   /**
    * Creates a factory for asymmetric crypto card transaction managers.
    *
-   * @return A not null reference.
+   * @return A non-null reference.
    * @since 0.1.0
    */
   public AsymmetricCryptoCardTransactionManagerFactory
       createAsymmetricCryptoCardTransactionManagerFactory() {
-    isTestModeFinalized = true; // force test mode to be set first
+    isTestModeConfigurable = false; // force test mode to be set first
     return new AsymmetricCryptoCardTransactionManagerFactoryAdapter();
   }
 
   /**
-   * Creates a Primary Certificate Authority (PCA) certificate from a provided public key as a
-   * {@link PublicKey}.
+   * Creates a Primary Certificate Authority (PCA) from a provided 2048-bit RSA public key.
    *
-   * @param pcaPublicKeyReference The reference to the PCA public key.
-   * @param pcaPublicKey The PCA's public key.
-   * @return A not null reference.
+   * @param pcaPublicKeyReference The PCA public key reference (29 bytes).
+   * @param pcaPublicKey The PCA public key (2048-bit RSA key with public exponent equal to 65537).
+   * @return A non-null reference.
    * @throws IllegalArgumentException If the public key reference or the key is null or invalid.
    * @since 0.1.0
    */
-  public PcaCertificate createPcaCertificate(byte[] pcaPublicKeyReference, PublicKey pcaPublicKey) {
+  public PcaCertificate createPcaCertificate(
+      byte[] pcaPublicKeyReference, RSAPublicKey pcaPublicKey) {
+
     Assert.getInstance()
         .notNull(pcaPublicKeyReference, "pcaPublicKeyReference")
-        .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length");
-    isTestModeFinalized = true; // force test mode to be set first
+        .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length")
+        .notNull(pcaPublicKey, "pcaPublicKey");
+
     CertificateUtils.checkRSA2048PublicKey(pcaPublicKey);
+
+    isTestModeConfigurable = false; // force test mode to be set first
     return new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKey);
   }
 
   /**
-   * Creates a Primary Certificate Authority (PCA) certificate from a provided public key modulus.
+   * Creates a Primary Certificate Authority (PCA) certificate from a provided 2048-bit RSA key
+   * modulus.
    *
-   * @param pcaPublicKeyReference The reference to the PCA public key.
-   * @param pcaPublicKeyModulus The modulus of the PCA public key.
-   * @return A not null reference.
+   * @param pcaPublicKeyReference The PCA public key reference (29 bytes).
+   * @param pcaPublicKeyModulus The RSA public key modulus (256 bytes).
+   * @return A non-null reference.
+   * @throws IllegalArgumentException If the public key reference or the key modulus is null or
+   *     invalid.
    * @since 0.1.0
    */
   public PcaCertificate createPcaCertificate(
       byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus) {
+
     Assert.getInstance()
         .notNull(pcaPublicKeyReference, "pcaPublicKeyReference")
         .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length")
         .notNull(pcaPublicKeyModulus, "pcaPublicKeyModulus")
         .isEqual(pcaPublicKeyModulus.length, 256, "pcaPublicKeyModulus length");
-    isTestModeFinalized = true; // force test mode to be set first
+
+    isTestModeConfigurable = false; // force test mode to be set first
     return new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKeyModulus);
   }
 
@@ -130,7 +139,7 @@ public class PkiExtensionService {
    * <p>In addition to the signature check, a validation of the certificate validity period is done.
    *
    * @param caCertificate The 384-byte byte array containing the CA certificate data.
-   * @return A not null reference.
+   * @return A non-null reference.
    * @throws IllegalArgumentException If the provided value is null or invalid.
    * @throws CertificateConsistencyException If the certificate fails the internal validation.
    * @since 0.1.0
@@ -139,14 +148,9 @@ public class PkiExtensionService {
     Assert.getInstance()
         .notNull(caCertificate, "caCertificate")
         .isEqual(
-            caCertificate.length,
-            CertificatesConstants.CA_CERTIFICATE_RAW_DATA_SIZE,
-            "caCertificate length")
-        .isEqual(
-            (int) caCertificate[0],
-            CertificatesConstants.CA_CERTIFICATE_TYPE_BYTE,
-            "caCertificate type");
-    isTestModeFinalized = true; // force test mode to be set first
+            caCertificate.length, Constants.CA_CERTIFICATE_RAW_DATA_SIZE, "caCertificate length")
+        .isEqual((int) caCertificate[0], Constants.CA_CERTIFICATE_TYPE_BYTE, "caCertificate type");
+    isTestModeConfigurable = false; // force test mode to be set first
     try {
       return new CalypsoCaCertificateV1Adapter(caCertificate);
     } catch (CertificateValidationException e) {
@@ -165,12 +169,12 @@ public class PkiExtensionService {
    *
    * @param caCertificateType The type of CA certificate to be parsed, indicating the expected
    *     format and structure.
-   * @return A not null reference.
+   * @return A non-null reference.
    * @throws UnsupportedOperationException If the specified type is not supported by this factory.
    * @since 0.1.0
    */
   public CaCertificateParser createCaCertificateParser(CaCertificateType caCertificateType) {
-    isTestModeFinalized = true; // force test mode to be set first
+    isTestModeConfigurable = false; // force test mode to be set first
     if (caCertificateType == CaCertificateType.CALYPSO) {
       return new CalypsoCaCertificateParserAdapter();
     }
@@ -189,13 +193,13 @@ public class PkiExtensionService {
    *
    * @param cardCertificateType The type of card certificate to be parsed, indicating the expected
    *     format and structure.
-   * @return A not null reference.
+   * @return A non-null reference.
    * @throws UnsupportedOperationException If the specified type is not supported by this factory.
    * @since 0.1.0
    */
   public CardCertificateParser createCardCertificateParser(
       CardCertificateType cardCertificateType) {
-    isTestModeFinalized = true; // force test mode to be set first
+    isTestModeConfigurable = false; // force test mode to be set first
     if (cardCertificateType == CardCertificateType.CALYPSO) {
       return new CalypsoCardCertificateParserAdapter();
     }
@@ -206,11 +210,11 @@ public class PkiExtensionService {
   /**
    * Get the factory for creating Calypso certificate.
    *
-   * @return A not null reference.
+   * @return A non-null reference.
    * @since 0.1.0
    */
   public CalypsoCertificateApiFactory getCalypsoCertificateApiFactory() {
-    isTestModeFinalized = true; // force test mode to be set first
+    isTestModeConfigurable = false; // force test mode to be set first
     return new CalypsoCertificateApiFactoryAdapter();
   }
 

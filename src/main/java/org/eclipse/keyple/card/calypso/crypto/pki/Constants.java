@@ -16,7 +16,7 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
  *
  * @since 0.1.0
  */
-class CertificatesConstants {
+class Constants {
 
   // Common definitions
   static final int KEY_REFERENCE_SIZE = 29;
@@ -40,17 +40,25 @@ class CertificatesConstants {
   static final int CA_RFU2_SIZE = 2;
   static final int CA_PUBLIC_KEY_HEADER_SIZE = 34;
 
-  // Card certificate specific definitions
-  static final int CARD_CERTIFICATE_RAW_DATA_SIZE = 316;
-  static final byte CARD_CERTIFICATE_TYPE_BYTE = (byte) 0x91;
-  static final int CARD_CERTIFICATE_RECOVERED_DATA_SIZE = 222;
-  static final byte CARD_CERTIFICATE_VERSION_BYTE = 1;
-  static final int CARD_SERIAL_NUMBER_SIZE = 8;
-  static final int CARD_CERTIFICATE_RIGHT_SIZE = 1;
-  static final int CARD_CERTIFICATE_RFU_SIZE = 18;
-  static final int CARD_CERTIFICATE_RECOVERED_CARD_INFO_SIZE = 7;
-  static final int CARD_CERTIFICATE_RECOVERED_ECC_PUBLIC_KEY_SIZE = 64;
-
   /** Private constructor. */
-  private CertificatesConstants() {}
+  private Constants() {}
+
+  static class CalypsoCaCertificateV1Constants {
+    private CalypsoCaCertificateV1Constants() {}
+  }
+
+  static class CalypsoCardCertificateV1Constants {
+    // Card certificate specific definitions
+    static final int CARD_CERTIFICATE_RAW_DATA_SIZE = 316;
+    static final byte CARD_CERTIFICATE_TYPE_BYTE = (byte) 0x91;
+    static final int CARD_CERTIFICATE_RECOVERED_DATA_SIZE = 222;
+    static final byte CARD_CERTIFICATE_VERSION_BYTE = 1;
+    static final int CARD_SERIAL_NUMBER_SIZE = 8;
+    static final int CARD_CERTIFICATE_RIGHT_SIZE = 1;
+    static final int CARD_CERTIFICATE_RFU_SIZE = 18;
+    static final int CARD_CERTIFICATE_RECOVERED_CARD_INFO_SIZE = 7;
+    static final int CARD_CERTIFICATE_RECOVERED_ECC_PUBLIC_KEY_SIZE = 64;
+
+    private CalypsoCardCertificateV1Constants() {}
+  }
 }

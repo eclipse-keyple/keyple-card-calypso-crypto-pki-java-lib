@@ -141,7 +141,7 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +boolean isCardCertificatesAuthenticationAllowed ()
     }
     ~class "<<<back:lightGreen>PcaCertificate</back>>>\n<<<back:pink>PcaCertificateSpi</back>>>\n<<<back:pink>CaCertificateContentSpi</back>>>\n**final** PcaCertificateAdapter" as PcaCertificateAdapter <<blue>> {
-        ~PcaCertificateAdapter (byte[] publicKeyReference, <back:yellow>PublicKey</back> publicKey)
+        ~PcaCertificateAdapter (byte[] publicKeyReference, <back:yellow>RSAPublicKey</back> publicKey)
         ~PcaCertificateAdapter (byte[] publicKeyReference, byte[] publicKeyModulus)
 
         -- **PcaCertificateSpi** --

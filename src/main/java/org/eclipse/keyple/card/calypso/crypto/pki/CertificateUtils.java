@@ -15,7 +15,6 @@ import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
@@ -46,27 +45,19 @@ class CertificateUtils {
    * Ensures that the provided key is a valid RSA 2048 bits public key with a modulus of 65537,
    * throwing appropriate exceptions if not.
    *
-   * @param publicKey The key to check.
-   * @throws IllegalArgumentException if the provided key if is null, not an instance of {@link
-   *     RSAPublicKey}, not a 2048-bit RSA key, or has a modulus different from 65537.
+   * @param rsaPublicKey The key to check.
+   * @throws IllegalArgumentException if the provided key is not a 2048-bit RSA key, or has a
+   *     modulus different from 65537.
    * @since 0.1.0
    */
-  static void checkRSA2048PublicKey(PublicKey publicKey) {
-    if (publicKey instanceof RSAPublicKey) {
-      RSAPublicKey rsaPublicKey = (RSAPublicKey) publicKey;
-
-      // Check for 2048 bits length
-      if (rsaPublicKey.getModulus().bitLength() != 2048) {
-        throw new IllegalArgumentException("Public key must be 2048 bits");
-      }
-
-      // Check for modulus 65537
-      if (!rsaPublicKey.getPublicExponent().equals(BigInteger.valueOf(65537))) {
-        throw new IllegalArgumentException("Public key's modulus must be 65537");
-      }
-    } else {
-      throw new IllegalArgumentException(
-          "The provided key is null or not an instance of RSAPublicKey");
+  static void checkRSA2048PublicKey(RSAPublicKey rsaPublicKey) {
+    // Check for 2048 bits length
+    if (rsaPublicKey.getModulus().bitLength() != 2048) {
+      throw new IllegalArgumentException("Public key must be 2048 bits");
+    }
+    // Check for public exponent 65537
+    if (!rsaPublicKey.getPublicExponent().equals(BigInteger.valueOf(65537))) {
+      throw new IllegalArgumentException("Public key's exponent must be 65537");
     }
   }
 
@@ -142,9 +133,7 @@ class CertificateUtils {
     try {
       pssSign.updateWithRecoveredMessage(
           Arrays.copyOfRange(
-              certificate,
-              certificate.length - CertificatesConstants.RSA_SIGNATURE_SIZE,
-              certificate.length));
+              certificate, certificate.length - Constants.RSA_SIGNATURE_SIZE, certificate.length));
     } catch (InvalidCipherTextException e) {
       throw new AsymmetricCryptoException(e.getMessage(), e);
     }

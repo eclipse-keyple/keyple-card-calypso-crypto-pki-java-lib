@@ -163,12 +163,14 @@ final class CalypsoCardCertificateV1GeneratorAdapter implements CalypsoCardCerti
   @Override
   public byte[] generate() {
     ByteBuffer certificateRawData =
-        ByteBuffer.allocate(CertificatesConstants.CARD_CERTIFICATE_RAW_DATA_SIZE);
+        ByteBuffer.allocate(
+            Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_RAW_DATA_SIZE);
 
     // Type
-    certificateRawData.put(CertificatesConstants.CARD_CERTIFICATE_TYPE_BYTE);
+    certificateRawData.put(Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_TYPE_BYTE);
     // Version
-    certificateRawData.put(CertificatesConstants.CARD_CERTIFICATE_VERSION_BYTE);
+    certificateRawData.put(
+        Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_VERSION_BYTE);
     // Issuer reference
     certificateRawData.put(issuerCertificate.getPublicKeyReference());
     // AID length
@@ -194,13 +196,12 @@ final class CalypsoCardCertificateV1GeneratorAdapter implements CalypsoCardCerti
 
     // Prepare recoverable data section
     ByteBuffer recoverableBuffer =
-        ByteBuffer.allocate(CertificatesConstants.CARD_CERTIFICATE_RECOVERED_DATA_SIZE);
+        ByteBuffer.allocate(
+            Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_RECOVERED_DATA_SIZE);
     // Start date
-    recoverableBuffer.put(
-        ByteArrayUtil.extractBytes(startDateBcd, CertificatesConstants.VALIDITY_DATE_SIZE));
+    recoverableBuffer.put(ByteArrayUtil.extractBytes(startDateBcd, Constants.VALIDITY_DATE_SIZE));
     // End date
-    recoverableBuffer.put(
-        ByteArrayUtil.extractBytes(endDateBcd, CertificatesConstants.VALIDITY_DATE_SIZE));
+    recoverableBuffer.put(ByteArrayUtil.extractBytes(endDateBcd, Constants.VALIDITY_DATE_SIZE));
     // Startup info
     recoverableBuffer.put(startupInfo);
     // Card public key

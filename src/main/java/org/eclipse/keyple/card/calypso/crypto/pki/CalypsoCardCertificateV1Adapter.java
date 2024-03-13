@@ -11,7 +11,7 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import static org.eclipse.keyple.card.calypso.crypto.pki.CertificatesConstants.KEY_REFERENCE_SIZE;
+import static org.eclipse.keyple.card.calypso.crypto.pki.Constants.KEY_REFERENCE_SIZE;
 
 import java.nio.ByteBuffer;
 import org.eclipse.keyple.core.util.Assert;
@@ -58,7 +58,7 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
     Assert.getInstance()
         .isEqual(
             cardOutputData.length,
-            CertificatesConstants.CARD_CERTIFICATE_RAW_DATA_SIZE,
+            Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_RAW_DATA_SIZE,
             "cardOutputData size");
 
     // Wrap the card output data and keep it for later use
@@ -66,12 +66,12 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
 
     // Type
     certificateRawData.position(
-        certificateRawData.position()
-            + CertificatesConstants.CA_TYPE_SIZE); // skip type, already checked
+        certificateRawData.position() + Constants.CA_TYPE_SIZE); // skip type, already checked
 
     // Version
     CertificateUtils.checkVersion(
-        CertificatesConstants.CARD_CERTIFICATE_VERSION_BYTE, certificateRawData.get());
+        Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_VERSION_BYTE,
+        certificateRawData.get());
 
     // Issuer key reference
     issuerKeyReference = new byte[KEY_REFERENCE_SIZE];
@@ -81,7 +81,8 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
     cardAidValue = checkAndGetAidValue(certificateRawData);
 
     // Get serial number
-    cardSerialNumber = new byte[CertificatesConstants.CARD_SERIAL_NUMBER_SIZE];
+    cardSerialNumber =
+        new byte[Constants.CalypsoCardCertificateV1Constants.CARD_SERIAL_NUMBER_SIZE];
     certificateRawData.get(cardSerialNumber);
 
     if (logger.isDebugEnabled()) {
@@ -101,8 +102,7 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
    */
   private byte[] checkAndGetAidValue(ByteBuffer buffer) throws CertificateValidationException {
     byte cardAidSize = buffer.get();
-    if (cardAidSize >= CertificatesConstants.AID_SIZE_MIN
-        && cardAidSize <= CertificatesConstants.AID_SIZE_MAX) {
+    if (cardAidSize >= Constants.AID_SIZE_MIN && cardAidSize <= Constants.AID_SIZE_MAX) {
       byte[] aid = new byte[cardAidSize];
       buffer.get(aid);
       buffer.position(buffer.position() + cardAidSize); // Move buffer position after reading AID
@@ -159,32 +159,34 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
                 certificateRawData.array(), issuerCertificateContent));
 
     // Start date
-    byte[] dateBytes = new byte[CertificatesConstants.VALIDITY_DATE_SIZE];
+    byte[] dateBytes = new byte[Constants.VALIDITY_DATE_SIZE];
     recoveredData.get(dateBytes);
     recoveredStartDate =
-        ByteArrayUtil.extractLong(dateBytes, 0, CertificatesConstants.VALIDITY_DATE_SIZE, false);
+        ByteArrayUtil.extractLong(dateBytes, 0, Constants.VALIDITY_DATE_SIZE, false);
 
     // End date
     recoveredData.get(dateBytes);
-    recoveredEndDate =
-        ByteArrayUtil.extractLong(dateBytes, 0, CertificatesConstants.VALIDITY_DATE_SIZE, false);
+    recoveredEndDate = ByteArrayUtil.extractLong(dateBytes, 0, Constants.VALIDITY_DATE_SIZE, false);
 
     // Card certificate rights and card startup info
     recoveredData.position(
         recoveredData.position()
-            + CertificatesConstants.CARD_CERTIFICATE_RIGHT_SIZE
-            + CertificatesConstants
+            + Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_RIGHT_SIZE
+            + Constants.CalypsoCardCertificateV1Constants
                 .CARD_CERTIFICATE_RECOVERED_CARD_INFO_SIZE); // skip card certificates rights and
     // startup info
 
     // Card certificate RFU
     recoveredData.position(
         recoveredData.position()
-            + CertificatesConstants.CARD_CERTIFICATE_RFU_SIZE); // skip card certificates RFU
+            + Constants.CalypsoCardCertificateV1Constants
+                .CARD_CERTIFICATE_RFU_SIZE); // skip card certificates RFU
 
     // Card ECC public key
     byte[] recoveredEccPublicKey =
-        new byte[CertificatesConstants.CARD_CERTIFICATE_RECOVERED_ECC_PUBLIC_KEY_SIZE];
+        new byte
+            [Constants.CalypsoCardCertificateV1Constants
+                .CARD_CERTIFICATE_RECOVERED_ECC_PUBLIC_KEY_SIZE];
     recoveredData.get(recoveredEccPublicKey);
 
     checkCertificateConsistency(issuerCertificateContent);
