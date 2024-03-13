@@ -151,18 +151,21 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
    */
   @Override
   public byte[] generate() {
-    ByteBuffer certificateRawData = ByteBuffer.allocate(Constants.CA_CERTIFICATE_RAW_DATA_SIZE);
+    ByteBuffer certificateRawData =
+        ByteBuffer.allocate(CalypsoCaCertificateV1Constants.RAW_DATA_SIZE);
 
     // Type
-    certificateRawData.put(Constants.CA_CERTIFICATE_TYPE_BYTE);
+    certificateRawData.put(CalypsoCaCertificateV1Constants.TYPE);
     // Version
-    certificateRawData.put(Constants.CA_CERTIFICATE_VERSION_BYTE);
+    certificateRawData.put(CalypsoCaCertificateV1Constants.VERSION);
     // Issuer public key reference
     certificateRawData.put(issuerPublicKeyReference);
     // Certificate public key reference
     certificateRawData.put(caPublicKeyReference);
     // Start date
-    certificateRawData.put(ByteArrayUtil.extractBytes(startDateBcd, Constants.VALIDITY_DATE_SIZE));
+    certificateRawData.put(
+        ByteArrayUtil.extractBytes(
+            startDateBcd, CalypsoCaCertificateV1Constants.VALIDITY_DATE_SIZE));
     // RFU1
     certificateRawData.putInt(0);
     // CA rights
@@ -170,19 +173,21 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
     // CA scope
     certificateRawData.put(caScope);
     // End date
-    certificateRawData.put(ByteArrayUtil.extractBytes(endDateBcd, Constants.VALIDITY_DATE_SIZE));
+    certificateRawData.put(
+        ByteArrayUtil.extractBytes(endDateBcd, CalypsoCaCertificateV1Constants.VALIDITY_DATE_SIZE));
     // Target AID size
     certificateRawData.put((byte) (aid.length & 0xFF));
     // Target AID
     certificateRawData.put(aid);
-    byte[] padding = new byte[Constants.AID_SIZE_MAX - aid.length];
+    byte[] padding = new byte[CalypsoCaCertificateV1Constants.AID_SIZE_MAX - aid.length];
     certificateRawData.put(padding);
     // Operating mode
     certificateRawData.put((byte) (isAidTruncationAllowed ? 1 : 0));
 
     // Create an array containing the 222 first bytes of the public key
     byte[] recoverableData =
-        Arrays.copyOf(caPublicKey.getEncoded(), Constants.CA_CERTIFICATE_RECOVERED_DATA_SIZE);
+        Arrays.copyOf(
+            caPublicKey.getEncoded(), CalypsoCaCertificateV1Constants.RECOVERED_DATA_SIZE);
 
     // Generate the final certificate from the data and recoverable data
     return caCertificateSigner.generateSignedCertificate(

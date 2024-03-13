@@ -25,10 +25,8 @@ import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.engines.RSAEngine;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.signers.ISO9796d2PSSSigner;
-import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
-import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 
 /**
@@ -37,6 +35,8 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificat
  * @since 0.1.0
  */
 class CertificateUtils {
+
+  static final int RSA_SIGNATURE_SIZE = 256;
 
   /** Private constructor */
   private CertificateUtils() {}
@@ -133,7 +133,7 @@ class CertificateUtils {
     try {
       pssSign.updateWithRecoveredMessage(
           Arrays.copyOfRange(
-              certificate, certificate.length - Constants.RSA_SIGNATURE_SIZE, certificate.length));
+              certificate, certificate.length - RSA_SIGNATURE_SIZE, certificate.length));
     } catch (InvalidCipherTextException e) {
       throw new AsymmetricCryptoException(e.getMessage(), e);
     }
@@ -187,127 +187,5 @@ class CertificateUtils {
     long bcdMonth = ((long) (month / 10) << 4) | (month % 10);
     long bcdDay = ((long) (day / 10) << 4) | (day % 10);
     return (bcdYear << 16) | (bcdMonth << 8) | bcdDay;
-  }
-
-  /**
-   * Convert the provided int into a BCD long.
-   *
-   * @param value The value to convert.
-   * @return The converted value.
-   * @since 0.1.0
-   */
-  static long convertToBcd(int value) {
-    long bcdValue = 0;
-    int position = 0;
-
-    while (value != 0) {
-      int digit = value % 10;
-      bcdValue |= (long) digit << (position * 4);
-      value /= 10;
-      position++;
-    }
-
-    return bcdValue;
-  }
-
-  /**
-   * Checks if the current date falls within the validity period specified by the start and end
-   * dates. The method uses long representations of dates in BCD (Binary-Coded Decimal) format.
-   *
-   * @param startDate The start date of the certificate's validity period, represented as a long. A
-   *     value of 0 indicates that no start date is set, thus no start constraint.
-   * @param endDate The end date of the certificate's validity period, represented as a long. A
-   *     value of 0 indicates that no end date is set, thus no end constraint.
-   * @throws CertificateConsistencyException If the current date is before the validity period's
-   *     start date or after the validity period's end date. The exception contains a message
-   *     indicating whether the certificate is not yet valid or has expired, along with the relevant
-   *     date.
-   * @since 0.1.0
-   */
-  static void checkCertificateValidityPeriod(long startDate, long endDate) {
-    long currentDate = getCurrentDateAsBcdLong();
-    if (startDate != 0 && currentDate < startDate) {
-      throw new CertificateConsistencyException(
-          "Certificate not yet valid. Start date: " + HexUtil.toHex(startDate));
-    }
-    if (endDate != 0 && currentDate > endDate) {
-      throw new CertificateConsistencyException(
-          "Certificate expired. End date: " + HexUtil.toHex(endDate));
-    }
-  }
-
-  /**
-   * Checks the version of a certificate.
-   *
-   * @param expectedVersion The expected version
-   * @param version The version byte of the certificate
-   * @throws CertificateValidationException If the certificate version is invalid
-   * @since 0.1.0
-   */
-  static void checkVersion(byte expectedVersion, byte version)
-      throws CertificateValidationException {
-    if (version != expectedVersion) {
-      // it makes no sense to parse the remaining data
-      throw new CertificateValidationException(
-          "Invalid certificate version: " + HexUtil.toHex(version));
-    }
-  }
-
-  /**
-   * Validates whether the issuer's certificate has the necessary permissions to authenticate
-   * another certificate.
-   *
-   * <p>This method checks if the issuer certificate has the appropriate authorization based on the
-   * type of certificate being authenticated.
-   *
-   * @param isCardCertificate Indicates whether the certificate to be authenticated is a card
-   *     certificate (true) or a CA certificate (false).
-   * @param issuerCertificateContent The issuer certificate content.
-   * @throws CertificateValidationException If the issuer certificate is not allowed to authenticate
-   *     a CA certificate.
-   */
-  static void checkAuthenticationAllowed(
-      boolean isCardCertificate, CaCertificateContentSpi issuerCertificateContent)
-      throws CertificateValidationException {
-    boolean isAllowed =
-        isCardCertificate
-            ? issuerCertificateContent.isCardCertificatesAuthenticationAllowed()
-            : issuerCertificateContent.isCaCertificatesAuthenticationAllowed();
-    if (!isAllowed) {
-      throw new CertificateValidationException(
-          "Parent certificate ("
-              + HexUtil.toHex(issuerCertificateContent.getPublicKeyReference())
-              + ") not allowed to authenticate a "
-              + (isCardCertificate ? "card" : "CA")
-              + "certificate");
-    }
-  }
-
-  /**
-   * Checks if the current date falls within the validity period specified by the start and end
-   * dates.
-   *
-   * @param startDate The start date of the validity period, represented as a long (BCD format). A
-   *     value of 0 indicates no start date.
-   * @param endDate The end date of the validity period, represented as a long (BCD format). A value
-   *     of 0 indicates no end date.
-   * @throws CertificateConsistencyException If the current date is before the start date or after
-   *     the end date.
-   * @since 0.1.0
-   */
-  public static void checkValidity(long startDate, long endDate) {
-    long currentDate = CertificateUtils.getCurrentDateAsBcdLong();
-
-    // Check start date
-    if (startDate != 0 && currentDate < startDate) {
-      throw new CertificateConsistencyException(
-          "Certificate not yet valid. Start date: " + HexUtil.toHex(startDate));
-    }
-
-    // Check end date
-    if (endDate != 0 && currentDate > endDate) {
-      throw new CertificateConsistencyException(
-          "Certificate expired. End date: " + HexUtil.toHex(endDate));
-    }
   }
 }

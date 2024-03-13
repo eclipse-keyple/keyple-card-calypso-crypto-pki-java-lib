@@ -11,13 +11,11 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import static org.eclipse.keyple.card.calypso.crypto.pki.Constants.KEY_REFERENCE_SIZE;
-
 import java.nio.ByteBuffer;
 import org.eclipse.keyple.core.util.Assert;
-import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CardCertificate;
+import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
@@ -43,54 +41,36 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
   private final byte[] issuerKeyReference;
   private final byte[] cardAidValue;
   private final byte[] cardSerialNumber;
-  private long recoveredStartDate;
-  private long recoveredEndDate;
+  private long startDate;
+  private long endDate;
 
   /**
    * Creates a new instance from the data returned by the card.
    *
    * @param cardOutputData The raw data obtained from the card.
-   * @throws IllegalArgumentException If the provided data length is not 384 bytes.
-   * @throws CertificateValidationException If there is an error during certificate validation.
    * @since 0.1.0
    */
-  CalypsoCardCertificateV1Adapter(byte[] cardOutputData) throws CertificateValidationException {
+  CalypsoCardCertificateV1Adapter(byte[] cardOutputData) {
     Assert.getInstance()
         .isEqual(
             cardOutputData.length,
-            Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_RAW_DATA_SIZE,
+            CalypsoCardCertificateV1Constants.RAW_DATA_SIZE,
             "cardOutputData size");
 
     // Wrap the card output data and keep it for later use
     certificateRawData = ByteBuffer.wrap(cardOutputData);
 
-    // Type
-    certificateRawData.position(
-        certificateRawData.position() + Constants.CA_TYPE_SIZE); // skip type, already checked
-
-    // Version
-    CertificateUtils.checkVersion(
-        Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_VERSION_BYTE,
-        certificateRawData.get());
-
     // Issuer key reference
-    issuerKeyReference = new byte[KEY_REFERENCE_SIZE];
+    certificateRawData.position(CalypsoCardCertificateV1Constants.ISSUER_KEY_REFERENCE_OFFSET);
+    issuerKeyReference = new byte[CalypsoCardCertificateV1Constants.KEY_REFERENCE_SIZE];
     certificateRawData.get(issuerKeyReference);
 
     // Get AID
     cardAidValue = checkAndGetAidValue(certificateRawData);
 
     // Get serial number
-    cardSerialNumber =
-        new byte[Constants.CalypsoCardCertificateV1Constants.CARD_SERIAL_NUMBER_SIZE];
+    cardSerialNumber = new byte[CalypsoCardCertificateV1Constants.CARD_SERIAL_NUMBER_SIZE];
     certificateRawData.get(cardSerialNumber);
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Calypso card certificate V1");
-      logger.debug("Target public key reference {}", HexUtil.toHex(issuerKeyReference));
-      logger.debug("Card AID: {}", HexUtil.toHex(cardAidValue));
-      logger.debug("Card serial number: {}", HexUtil.toHex(cardSerialNumber));
-    }
   }
 
   /**
@@ -98,17 +78,17 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
    *
    * @param buffer The ByteBuffer containing the certificate data.
    * @return The target AID value as a byte array.
-   * @throws CertificateValidationException If the target AID size is invalid.
    */
-  private byte[] checkAndGetAidValue(ByteBuffer buffer) throws CertificateValidationException {
+  private byte[] checkAndGetAidValue(ByteBuffer buffer) {
     byte cardAidSize = buffer.get();
-    if (cardAidSize >= Constants.AID_SIZE_MIN && cardAidSize <= Constants.AID_SIZE_MAX) {
+    if (cardAidSize >= CalypsoCardCertificateV1Constants.AID_SIZE_MIN
+        && cardAidSize <= CalypsoCardCertificateV1Constants.AID_SIZE_MAX) {
       byte[] aid = new byte[cardAidSize];
       buffer.get(aid);
       buffer.position(buffer.position() + cardAidSize); // Move buffer position after reading AID
       return aid;
     } else {
-      throw new CertificateValidationException(
+      throw new IllegalStateException(
           "Bad target AID size: " + cardAidSize + ", expected between 5 and 16");
     }
   }
@@ -153,71 +133,67 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
       CaCertificateContentSpi issuerCertificateContent)
       throws CertificateValidationException, AsymmetricCryptoException {
 
+    // Check if issuer is allowed to authenticate this certificate
+    if (!issuerCertificateContent.isCardCertificatesAuthenticationAllowed()) {
+      throw new CertificateValidationException(
+          "Parent certificate ("
+              + HexUtil.toHex(issuerCertificateContent.getPublicKeyReference())
+              + ") not allowed to authenticate a card certificate");
+    }
+
     ByteBuffer recoveredData =
         ByteBuffer.wrap(
             CertificateUtils.checkCertificateSignatureAndRecoverData(
                 certificateRawData.array(), issuerCertificateContent));
 
     // Start date
-    byte[] dateBytes = new byte[Constants.VALIDITY_DATE_SIZE];
-    recoveredData.get(dateBytes);
-    recoveredStartDate =
-        ByteArrayUtil.extractLong(dateBytes, 0, Constants.VALIDITY_DATE_SIZE, false);
+    startDate = recoveredData.getInt();
+
+    long currentDate = CertificateUtils.getCurrentDateAsBcdLong();
+
+    if (startDate != 0 && currentDate < startDate) {
+      throw new CertificateConsistencyException(
+          "Certificate not yet valid. Start date: " + HexUtil.toHex(startDate));
+    }
 
     // End date
-    recoveredData.get(dateBytes);
-    recoveredEndDate = ByteArrayUtil.extractLong(dateBytes, 0, Constants.VALIDITY_DATE_SIZE, false);
+    endDate = recoveredData.getInt();
+
+    if (endDate != 0 && currentDate > endDate) {
+      throw new CertificateConsistencyException(
+          "Certificate expired. End date: " + HexUtil.toHex(endDate));
+    }
 
     // Card certificate rights and card startup info
     recoveredData.position(
         recoveredData.position()
-            + Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_RIGHT_SIZE
-            + Constants.CalypsoCardCertificateV1Constants
-                .CARD_CERTIFICATE_RECOVERED_CARD_INFO_SIZE); // skip card certificates rights and
+            + CalypsoCardCertificateV1Constants.RIGHTS_SIZE
+            + CalypsoCardCertificateV1Constants
+                .CARD_INFO_SIZE); // skip card certificates rights and
     // startup info
 
     // Card certificate RFU
     recoveredData.position(
         recoveredData.position()
-            + Constants.CalypsoCardCertificateV1Constants
-                .CARD_CERTIFICATE_RFU_SIZE); // skip card certificates RFU
+            + CalypsoCardCertificateV1Constants.RFU_SIZE); // skip card certificates RFU
 
     // Card ECC public key
-    byte[] recoveredEccPublicKey =
-        new byte
-            [Constants.CalypsoCardCertificateV1Constants
-                .CARD_CERTIFICATE_RECOVERED_ECC_PUBLIC_KEY_SIZE];
+    byte[] recoveredEccPublicKey = new byte[CalypsoCardCertificateV1Constants.ECC_PUBLIC_KEY_SIZE];
     recoveredData.get(recoveredEccPublicKey);
-
-    checkCertificateConsistency(issuerCertificateContent);
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Start date: {}", HexUtil.toHex(recoveredStartDate));
-      logger.debug("End date: {}", HexUtil.toHex(recoveredEndDate));
-    }
-
-    return new CardPublicKeyAdapter(recoveredEccPublicKey);
-  }
-
-  /**
-   * Analyzes the certificate's fields to detect inconsistencies.
-   *
-   * <p>This method performs a check of the certificate's integrity and validity.
-   *
-   * @param issuerCertificateContent The CA certificate of the issuer.
-   */
-  private void checkCertificateConsistency(CaCertificateContentSpi issuerCertificateContent)
-      throws CertificateValidationException {
-
-    // Check validity
-    CertificateUtils.checkValidity(recoveredStartDate, recoveredEndDate);
-
-    // Constraints from the parent certificate
-    // Verify if the parent is allowed to authenticate this certificate
-    CertificateUtils.checkAuthenticationAllowed(true, issuerCertificateContent);
 
     // Verify if the AID is consistent with the parent profile
     checkAidAgainstParentAid(issuerCertificateContent);
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Calypso card certificate V1");
+      logger.debug("Target public key reference {}", HexUtil.toHex(issuerKeyReference));
+      logger.debug("Start date: {}", HexUtil.toHex(startDate));
+      logger.debug("End date: {}", HexUtil.toHex(endDate));
+      logger.debug("Card AID: {}", HexUtil.toHex(cardAidValue));
+      logger.debug("Card serial number: {}", HexUtil.toHex(cardSerialNumber));
+    }
+
+    return new CardPublicKeyAdapter(recoveredEccPublicKey);
   }
 
   /**

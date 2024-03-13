@@ -11,8 +11,6 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import static org.eclipse.keyple.card.calypso.crypto.pki.Constants.KEY_REFERENCE_SIZE;
-
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -130,20 +128,25 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
     Assert.getInstance()
         .notNull(caCertificate, "caCertificate")
         .isEqual(
-            caCertificate.length, Constants.CA_CERTIFICATE_RAW_DATA_SIZE, "caCertificate length");
-
-    if (caCertificate[Constants.CA_CERTIFICATE_TYPE_OFFSET] != Constants.CA_CERTIFICATE_TYPE_BYTE) {
-      throw new IllegalArgumentException(
-          "Invalid certificate type: "
-              + HexUtil.toHex(caCertificate[Constants.CA_CERTIFICATE_TYPE_OFFSET]));
-    }
+            caCertificate.length,
+            CalypsoCaCertificateV1Constants.RAW_DATA_SIZE,
+            "caCertificate length")
+        .isEqual(
+            (int) caCertificate[CalypsoCaCertificateV1Constants.TYPE_OFFSET],
+            CalypsoCaCertificateV1Constants.TYPE,
+            "CA certificate type")
+        .isEqual(
+            (int) caCertificate[CalypsoCaCertificateV1Constants.VERSION_OFFSET],
+            CalypsoCaCertificateV1Constants.VERSION,
+            "CA certificate type");
 
     // Extract the certificate reference and check if already present
     byte[] certificateReference =
         Arrays.copyOfRange(
             caCertificate,
-            Constants.CA_CERTIFICATE_TARGET_KEY_REFERENCE_OFFSET,
-            Constants.CA_CERTIFICATE_TARGET_KEY_REFERENCE_OFFSET + KEY_REFERENCE_SIZE);
+            CalypsoCaCertificateV1Constants.TARGET_KEY_REFERENCE_OFFSET,
+            CalypsoCaCertificateV1Constants.TARGET_KEY_REFERENCE_OFFSET
+                + CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE);
 
     String certificateReferenceKey = HexUtil.toHex(certificateReference);
 
@@ -155,8 +158,9 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
     byte[] parentCertificateReference =
         Arrays.copyOfRange(
             caCertificate,
-            Constants.CA_CERTIFICATE_ISSUER_KEY_REFERENCE_OFFSET,
-            Constants.CA_CERTIFICATE_ISSUER_KEY_REFERENCE_OFFSET + KEY_REFERENCE_SIZE);
+            CalypsoCaCertificateV1Constants.ISSUER_KEY_REFERENCE_OFFSET,
+            CalypsoCaCertificateV1Constants.ISSUER_KEY_REFERENCE_OFFSET
+                + CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE);
 
     String parentCertificateReferenceKey = HexUtil.toHex(parentCertificateReference);
 

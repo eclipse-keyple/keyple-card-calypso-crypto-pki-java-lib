@@ -11,6 +11,7 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
+import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CardCertificateParser;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertificateParserSpi;
@@ -39,7 +40,7 @@ final class CalypsoCardCertificateParserAdapter
    */
   @Override
   public byte getCertificateType() {
-    return Constants.CalypsoCardCertificateV1Constants.CARD_CERTIFICATE_TYPE_BYTE;
+    return CalypsoCardCertificateV1Constants.TYPE;
   }
 
   /**
@@ -50,6 +51,25 @@ final class CalypsoCardCertificateParserAdapter
   @Override
   public CardCertificateSpi parseCertificate(byte[] cardOutputData)
       throws CertificateValidationException {
+
+    if (cardOutputData[CalypsoCardCertificateV1Constants.TYPE_OFFSET]
+        != CalypsoCardCertificateV1Constants.TYPE) {
+      throw new CertificateValidationException(
+          "Invalid card certificate type: Expected "
+              + HexUtil.toHex(CalypsoCardCertificateV1Constants.TYPE)
+              + ", but got "
+              + HexUtil.toHex(cardOutputData[CalypsoCardCertificateV1Constants.TYPE_OFFSET]));
+    }
+
+    if (cardOutputData[CalypsoCardCertificateV1Constants.VERSION]
+        != CalypsoCardCertificateV1Constants.VERSION) {
+      throw new CertificateValidationException(
+          "Invalid card certificate version: Expected "
+              + HexUtil.toHex(CalypsoCardCertificateV1Constants.VERSION)
+              + ", but got "
+              + HexUtil.toHex(cardOutputData[CalypsoCardCertificateV1Constants.VERSION_OFFSET]));
+    }
+
     return new CalypsoCardCertificateV1Adapter(cardOutputData);
   }
 }

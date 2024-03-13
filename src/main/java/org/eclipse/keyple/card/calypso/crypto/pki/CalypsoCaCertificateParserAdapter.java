@@ -11,6 +11,7 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
+import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CaCertificateParser;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateParserSpi;
@@ -52,6 +53,25 @@ final class CalypsoCaCertificateParserAdapter
   @Override
   public CaCertificateSpi parseCertificate(byte[] cardOutputData)
       throws CertificateValidationException {
+
+    if (cardOutputData[CalypsoCaCertificateV1Constants.TYPE_OFFSET]
+        != CalypsoCaCertificateV1Constants.TYPE) {
+      throw new CertificateValidationException(
+          "Invalid CA certificate type: Expected "
+              + HexUtil.toHex(CalypsoCaCertificateV1Constants.TYPE)
+              + ", but got "
+              + HexUtil.toHex(cardOutputData[CalypsoCaCertificateV1Constants.TYPE_OFFSET]));
+    }
+
+    if (cardOutputData[CalypsoCaCertificateV1Constants.VERSION]
+        != CalypsoCaCertificateV1Constants.VERSION) {
+      throw new CertificateValidationException(
+          "Invalid CA certificate version: Expected "
+              + HexUtil.toHex(CalypsoCaCertificateV1Constants.VERSION)
+              + ", but got "
+              + HexUtil.toHex(cardOutputData[CalypsoCaCertificateV1Constants.VERSION_OFFSET]));
+    }
+
     return new CalypsoCaCertificateV1Adapter(cardOutputData);
   }
 }

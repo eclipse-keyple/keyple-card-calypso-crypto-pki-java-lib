@@ -17,8 +17,6 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.card.transaction.spi.*;
 import org.eclipse.keypop.calypso.certificate.CalypsoCertificateApiFactory;
-import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
-import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 
 /**
  * Extension service dedicated to the management of Calypso PKI card transaction and certificate
@@ -141,21 +139,22 @@ public class PkiExtensionService {
    * @param caCertificate The 384-byte byte array containing the CA certificate data.
    * @return A non-null reference.
    * @throws IllegalArgumentException If the provided value is null or invalid.
-   * @throws CertificateConsistencyException If the certificate fails the internal validation.
    * @since 0.1.0
    */
   public CaCertificate createCaCertificate(byte[] caCertificate) {
     Assert.getInstance()
         .notNull(caCertificate, "caCertificate")
         .isEqual(
-            caCertificate.length, Constants.CA_CERTIFICATE_RAW_DATA_SIZE, "caCertificate length")
-        .isEqual((int) caCertificate[0], Constants.CA_CERTIFICATE_TYPE_BYTE, "caCertificate type");
+            caCertificate.length,
+            CalypsoCaCertificateV1Constants.RAW_DATA_SIZE,
+            "caCertificate length")
+        .isEqual((int) caCertificate[0], CalypsoCaCertificateV1Constants.TYPE, "caCertificate type")
+        .isEqual(
+            (int) caCertificate[1],
+            CalypsoCaCertificateV1Constants.VERSION,
+            "caCertificate version");
     isTestModeConfigurable = false; // force test mode to be set first
-    try {
-      return new CalypsoCaCertificateV1Adapter(caCertificate);
-    } catch (CertificateValidationException e) {
-      throw new CertificateConsistencyException("Invalid CA certificate" + e.getMessage(), e);
-    }
+    return new CalypsoCaCertificateV1Adapter(caCertificate);
   }
 
   /**

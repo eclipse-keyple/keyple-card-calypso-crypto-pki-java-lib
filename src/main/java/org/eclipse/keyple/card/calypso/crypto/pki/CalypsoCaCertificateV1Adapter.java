@@ -11,13 +11,11 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import static org.eclipse.keyple.card.calypso.crypto.pki.Constants.KEY_REFERENCE_SIZE;
-
 import java.nio.ByteBuffer;
 import java.security.PublicKey;
-import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CaCertificate;
+import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
@@ -43,51 +41,79 @@ final class CalypsoCaCertificateV1Adapter
 
   private final ByteBuffer certificateRawData;
   private final byte[] issuerKeyReference;
-  private final byte[] caTargetKeyReference;
-  private final long startDate;
-  private final long endDate;
-  private final byte[] caTargetAidValue;
-  private final boolean isAidTruncated;
-  private final byte[] caPublicKeyHeader;
-  private final boolean isCardCertificatesAuthenticationAllowed;
-  private final boolean isCaCertificatesAuthenticationAllowed;
+  private byte[] caTargetKeyReference;
+  private long startDate;
+  private long endDate;
+  private byte[] caTargetAidValue;
+  private boolean isAidTruncated;
+  private boolean isCardCertificatesAuthenticationAllowed;
+  private boolean isCaCertificatesAuthenticationAllowed;
   private PublicKey caPublicKey;
 
   /**
    * Initializes a CalypsoCaCertificateV1Adapter object with the provided card output data.
    *
    * @param cardOutputData The card output data containing the certificate.
-   * @throws CertificateValidationException If there is an error during certificate validation.
    * @since 0.1.0
    */
-  CalypsoCaCertificateV1Adapter(byte[] cardOutputData) throws CertificateValidationException {
+  CalypsoCaCertificateV1Adapter(byte[] cardOutputData) {
 
     // Wrap the card output data and keep it for later use
     certificateRawData = ByteBuffer.wrap(cardOutputData);
 
-    // Type
-    certificateRawData.position(
-        certificateRawData.position() + Constants.CA_TYPE_SIZE); // skip type, already checked
-
-    // Version
-    CertificateUtils.checkVersion(Constants.CA_CERTIFICATE_VERSION_BYTE, certificateRawData.get());
-
-    // Issuer key reference
-    issuerKeyReference = new byte[KEY_REFERENCE_SIZE];
+    // Extract issuer key reference
+    certificateRawData.position(CalypsoCaCertificateV1Constants.ISSUER_KEY_REFERENCE_OFFSET);
+    issuerKeyReference = new byte[CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE];
     certificateRawData.get(issuerKeyReference);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
+  @Override
+  public byte[] getIssuerPublicKeyReference() {
+    return issuerKeyReference;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
+  @Override
+  public CaCertificateContentSpi checkCertificateAndGetContent(
+      CaCertificateContentSpi issuerCertificateContent)
+      throws CertificateValidationException, AsymmetricCryptoException {
+
+    // Check if issuer is allowed to authenticate this certificate
+    if (!issuerCertificateContent.isCaCertificatesAuthenticationAllowed()) {
+      throw new CertificateValidationException(
+          "Parent certificate ("
+              + HexUtil.toHex(issuerCertificateContent.getPublicKeyReference())
+              + ") not allowed to authenticate a CA certificate");
+    }
 
     // Target key reference
-    caTargetKeyReference = new byte[KEY_REFERENCE_SIZE];
+    certificateRawData.position(CalypsoCaCertificateV1Constants.TARGET_KEY_REFERENCE_OFFSET);
+    caTargetKeyReference = new byte[CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE];
     certificateRawData.get(caTargetKeyReference);
 
     // Start date
-    byte[] dateBytes = new byte[Constants.VALIDITY_DATE_SIZE];
-    certificateRawData.get(dateBytes);
-    startDate = ByteArrayUtil.extractLong(dateBytes, 0, Constants.VALIDITY_DATE_SIZE, false);
+    startDate = certificateRawData.getInt();
+
+    long currentDate = CertificateUtils.getCurrentDateAsBcdLong();
+
+    // Check start date
+    if (startDate != 0 && currentDate < startDate) {
+      throw new CertificateConsistencyException(
+          "Certificate not yet valid. Start date: " + HexUtil.toHex(startDate));
+    }
 
     // RFU1
     certificateRawData.position(
-        certificateRawData.position() + Constants.CA_RFU1_SIZE); // skip RFU1
+        certificateRawData.position() + CalypsoCaCertificateV1Constants.RFU1_SIZE); // skip RFU1
 
     // CaRights
     byte caRights = certificateRawData.get();
@@ -101,8 +127,12 @@ final class CalypsoCaCertificateV1Adapter
     checkCaScope(certificateRawData.get());
 
     // End date
-    certificateRawData.get(dateBytes);
-    endDate = ByteArrayUtil.extractLong(dateBytes, 0, Constants.VALIDITY_DATE_SIZE, false);
+    endDate = certificateRawData.getInt();
+
+    if (endDate != 0 && currentDate > endDate) {
+      throw new CertificateConsistencyException(
+          "Certificate expired. End date: " + HexUtil.toHex(endDate));
+    }
 
     // Check AID target size and create the expected caTargetAidValue
     caTargetAidValue = checkAndGetAidValue(certificateRawData);
@@ -110,13 +140,28 @@ final class CalypsoCaCertificateV1Adapter
     // Determine if the AID is truncated analyzing the CA operating mode
     isAidTruncated = checkAndGetOperatingMode(certificateRawData.get());
 
+    // Verify if the AID is consistent with the parent profile
+    checkAidAgainstParentAid(issuerCertificateContent);
+
     // RFU 2
     certificateRawData.position(
-        certificateRawData.position() + Constants.CA_RFU2_SIZE); // skip RFU2
+        certificateRawData.position() + CalypsoCaCertificateV1Constants.RFU2_SIZE); // skip RFU2
 
     // Public key header
-    caPublicKeyHeader = new byte[Constants.CA_PUBLIC_KEY_HEADER_SIZE];
+    byte[] caPublicKeyHeader = new byte[CalypsoCaCertificateV1Constants.PUBLIC_KEY_HEADER_SIZE];
     certificateRawData.get(caPublicKeyHeader);
+
+    // Verify the signature and recover the data (the 222 first bytes of public key)
+    byte[] recoveredData =
+        CertificateUtils.checkCertificateSignatureAndRecoverData(
+            certificateRawData.array(), issuerCertificateContent);
+
+    // Combines the recovered data and the header transmitted in clear to create the CA public key
+    byte[] caPublicKeyModulus = new byte[CalypsoCaCertificateV1Constants.RSA_KEY_SIZE];
+    System.arraycopy(caPublicKeyHeader, 0, caPublicKeyModulus, 0, caPublicKeyHeader.length);
+    System.arraycopy(
+        recoveredData, 0, caPublicKeyModulus, caPublicKeyHeader.length, recoveredData.length);
+    caPublicKey = CertificateUtils.generateRSAPublicKeyFromModulus(caPublicKeyModulus);
 
     if (logger.isDebugEnabled()) {
       logger.debug("Calypso CA certificate V1");
@@ -139,6 +184,8 @@ final class CalypsoCaCertificateV1Adapter
         logger.debug("AID truncation: {}", isAidTruncated ? MSG_ALLOWED : MSG_FORBIDDEN);
       }
     }
+
+    return this;
   }
 
   /**
@@ -239,10 +286,10 @@ final class CalypsoCaCertificateV1Adapter
   private byte[] checkAndGetAidValue(ByteBuffer buffer) throws CertificateValidationException {
     byte caTargetAidSize = buffer.get();
     if (caTargetAidSize == (byte) 0xFF) {
-      buffer.position(buffer.position() + Constants.AID_SIZE_MAX);
+      buffer.position(buffer.position() + CalypsoCaCertificateV1Constants.AID_SIZE_MAX);
       return null; // no AID NOSONAR
-    } else if (caTargetAidSize >= Constants.AID_SIZE_MIN
-        && caTargetAidSize <= Constants.AID_SIZE_MAX) {
+    } else if (caTargetAidSize >= CalypsoCaCertificateV1Constants.AID_SIZE_MIN
+        && caTargetAidSize <= CalypsoCaCertificateV1Constants.AID_SIZE_MAX) {
       byte[] aid = new byte[caTargetAidSize];
       buffer.position(
           buffer.position() + caTargetAidSize); // Move buffer position after reading AID
@@ -270,51 +317,6 @@ final class CalypsoCaCertificateV1Adapter
       throw new CertificateValidationException(
           "Unexpected operating mode value: " + HexUtil.toHex(caOperatingMode));
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @since 0.1.0
-   */
-  @Override
-  public byte[] getIssuerPublicKeyReference() {
-    return issuerKeyReference;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @since 0.1.0
-   */
-  @Override
-  public CaCertificateContentSpi checkCertificateAndGetContent(
-      CaCertificateContentSpi issuerCertificateContent)
-      throws CertificateValidationException, AsymmetricCryptoException {
-
-    // Check validity
-    CertificateUtils.checkValidity(startDate, endDate);
-
-    // Constraints from the parent certificate
-    // Verify if the parent is allowed to authenticate this certificate
-    CertificateUtils.checkAuthenticationAllowed(false, issuerCertificateContent);
-
-    // Verify if the AID is consistent with the parent profile
-    checkAidAgainstParentAid(issuerCertificateContent);
-
-    // Verify the signature and recover the data (the 222 first bytes of public key)
-    byte[] recoveredData =
-        CertificateUtils.checkCertificateSignatureAndRecoverData(
-            certificateRawData.array(), issuerCertificateContent);
-
-    // Combines the recovered data and the header transmitted in clear to create the CA public key
-    byte[] caPublicKeyModulus = new byte[Constants.RSA_KEY_SIZE];
-    System.arraycopy(caPublicKeyHeader, 0, caPublicKeyModulus, 0, caPublicKeyHeader.length);
-    System.arraycopy(
-        recoveredData, 0, caPublicKeyModulus, caPublicKeyHeader.length, recoveredData.length);
-    caPublicKey = CertificateUtils.generateRSAPublicKeyFromModulus(caPublicKeyModulus);
-
-    return this;
   }
 
   /**
