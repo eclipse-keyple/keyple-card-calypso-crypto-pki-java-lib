@@ -32,7 +32,6 @@ class CertificatesConstants {
   static final int CA_CERTIFICATE_RECOVERED_DATA_SIZE = 222;
   static final byte CA_CERTIFICATE_VERSION_BYTE = 1;
   static final int CA_CERTIFICATE_TYPE_OFFSET = 0;
-  static final int CA_CERTIFICATE_VERSION_OFFSET = 1;
   static final int CA_CERTIFICATE_ISSUER_KEY_REFERENCE_OFFSET = 2;
   static final int CA_CERTIFICATE_TARGET_KEY_REFERENCE_OFFSET =
       CA_CERTIFICATE_ISSUER_KEY_REFERENCE_OFFSET + KEY_REFERENCE_SIZE;
@@ -46,12 +45,8 @@ class CertificatesConstants {
   static final byte CARD_CERTIFICATE_TYPE_BYTE = (byte) 0x91;
   static final int CARD_CERTIFICATE_RECOVERED_DATA_SIZE = 222;
   static final byte CARD_CERTIFICATE_VERSION_BYTE = 1;
-  static final int CARD_CERTIFICATE_TYPE_OFFSET = 0;
-  static final int CARD_CERTIFICATE_VERSION_OFFSET = 1;
-  static final int CARD_CERTIFICATE_ISSUER_KEY_REFERENCE_OFFSET = 2;
   static final int CARD_SERIAL_NUMBER_SIZE = 8;
   static final int CARD_CERTIFICATE_RIGHT_SIZE = 1;
-  static final int CARD_STARTUP_INFO_SIZE = 7;
   static final int CARD_CERTIFICATE_RFU_SIZE = 18;
   static final int CARD_CERTIFICATE_RECOVERED_CARD_INFO_SIZE = 7;
   static final int CARD_CERTIFICATE_RECOVERED_ECC_PUBLIC_KEY_SIZE = 64;
