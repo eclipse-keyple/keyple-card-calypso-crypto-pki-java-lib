@@ -12,7 +12,6 @@
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import java.security.interfaces.RSAPublicKey;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.eclipse.keyple.core.util.Assert;
@@ -22,22 +21,36 @@ import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateSpi;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.PcaCertificateSpi;
 
 /**
- * Adapter of {@link CalypsoCertificateStore}.
+ * Adapter of {@link CalypsoCertificateStore}. TODO change return type for add methods
  *
  * @since 0.1.0
  */
 final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
 
-  private static final String MSG_THE_PROVIDED_PUBLIC_KEY_REFERENCE_ALREADY_IN_THE_STORE =
-      "The provided public key reference already in the store.";
-  private final Map<String, CaCertificateContentSpi> publicKeyReferenceToCaCertificateContentSpi =
-      new HashMap<String, CaCertificateContentSpi>();
+  private static final String MSG_THE_PROVIDED_PUBLIC_KEY_REFERENCE_ALREADY_REGISTERED =
+      "The provided public key reference already registered.";
+  private static final String MSG_INVALID_PUBLIC_KEY = "Invalid public key: ";
+  private static final String MSG_AN_ERROR_OCCURS_DURING_THE_CHECK_OF_THE_PUBLIC_KEY =
+      "An error occurs during the check of the public key: ";
+  private static final String MSG_THE_ISSUER_CERTIFICATE_IS_NOT_REGISTERED =
+      "The issuer certificate is not registered: ";
+  private static final String MSG_INVALID_CERTIFICATE = "Invalid certificate: ";
+  private static final String MSG_AN_ERROR_OCCURS_DURING_THE_CHECK_OF_THE_CERTIFICATE =
+      "An error occurs during the check of the certificate: ";
+  private static final String
+      MSG_A_CERTIFICATE_IS_ALREADY_REGISTERED_FOR_THE_PROVIDED_PUBLIC_KEY_REFERENCE =
+          "A certificate is already registered for the provided public key reference: ";
 
   /** singleton instance of CalypsoCertificateStore */
   private static final CalypsoCertificateStoreAdapter INSTANCE =
       new CalypsoCertificateStoreAdapter();
+
+  private final Map<String, CaCertificateContentSpi> caCertificates =
+      new HashMap<String, CaCertificateContentSpi>();
 
   /** Private constructor */
   private CalypsoCertificateStoreAdapter() {}
@@ -60,24 +73,41 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
   @Override
   public CalypsoCertificateStore addPcaPublicKey(
       byte[] pcaPublicKeyReference, RSAPublicKey pcaPublicKey) {
+
     Assert.getInstance()
         .notNull(pcaPublicKeyReference, "pcaPublicKeyReference")
-        .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length")
+        .isEqual(
+            pcaPublicKeyReference.length,
+            CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE,
+            "pcaPublicKeyReference length")
         .notNull(pcaPublicKey, "pcaPublicKey");
 
     String pcaPublicKeyReferenceKey = HexUtil.toHex(pcaPublicKeyReference);
 
     // Check if the reference exists
-    if (publicKeyReferenceToCaCertificateContentSpi.containsKey(pcaPublicKeyReferenceKey)) {
-      throw new IllegalStateException(MSG_THE_PROVIDED_PUBLIC_KEY_REFERENCE_ALREADY_IN_THE_STORE);
+    if (caCertificates.containsKey(pcaPublicKeyReferenceKey)) {
+      throw new IllegalStateException(MSG_THE_PROVIDED_PUBLIC_KEY_REFERENCE_ALREADY_REGISTERED);
     }
 
     // Check if the RSA public key has the expected characteristics (size and exponent)
     CertificateUtils.checkRSA2048PublicKey(pcaPublicKey);
 
+    PcaCertificateSpi pcaCertificateSpi =
+        new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKey);
+
+    // Check certificate and get content
+    CaCertificateContentSpi certificateContent;
+    try {
+      certificateContent = pcaCertificateSpi.checkCertificateAndGetContent();
+    } catch (CertificateValidationException e) {
+      throw new IllegalArgumentException(MSG_INVALID_PUBLIC_KEY + e.getMessage(), e);
+    } catch (AsymmetricCryptoException e) {
+      throw new IllegalArgumentException(
+          MSG_AN_ERROR_OCCURS_DURING_THE_CHECK_OF_THE_PUBLIC_KEY + e.getMessage(), e);
+    }
+
     // Add a new PCA certificate to the map
-    publicKeyReferenceToCaCertificateContentSpi.put(
-        pcaPublicKeyReferenceKey, new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKey));
+    caCertificates.put(pcaPublicKeyReferenceKey, certificateContent);
     return this;
   }
 
@@ -89,31 +119,24 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
   @Override
   public CalypsoCertificateStore addPcaPublicKey(
       byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus) {
+
     Assert.getInstance()
-        .notNull(pcaPublicKeyReference, "pcaPublicKeyReference")
-        .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length")
         .notNull(pcaPublicKeyModulus, "pcaPublicKeyModulus")
-        .isEqual(pcaPublicKeyModulus.length, 256, "pcaPublicKeyModulus length");
-
-    String pcaPublicKeyReferenceKey = HexUtil.toHex(pcaPublicKeyReference);
-
-    // Check if the reference exists
-    if (publicKeyReferenceToCaCertificateContentSpi.containsKey(pcaPublicKeyReferenceKey)) {
-      throw new IllegalStateException(MSG_THE_PROVIDED_PUBLIC_KEY_REFERENCE_ALREADY_IN_THE_STORE);
-    }
+        .isEqual(
+            pcaPublicKeyModulus.length,
+            CalypsoCaCertificateV1Constants.RSA_KEY_SIZE,
+            "pcaPublicKeyModulus length");
 
     // Create a compliant RSA public key with the provided modulus
-    RSAPublicKey pcaPublicKey = null;
+    RSAPublicKey pcaPublicKey;
     try {
       pcaPublicKey = CertificateUtils.generateRSAPublicKeyFromModulus(pcaPublicKeyModulus);
     } catch (AsymmetricCryptoException e) {
-      throw new IllegalArgumentException(e.getMessage(), e);
+      throw new IllegalArgumentException(
+          MSG_AN_ERROR_OCCURS_DURING_THE_CHECK_OF_THE_PUBLIC_KEY + e.getMessage(), e);
     }
 
-    // Add a new PCA certificate to the map
-    publicKeyReferenceToCaCertificateContentSpi.put(
-        pcaPublicKeyReferenceKey, new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKey));
-    return this;
+    return addPcaPublicKey(pcaPublicKeyReference, pcaPublicKey);
   }
 
   /**
@@ -132,60 +155,43 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
             CalypsoCaCertificateV1Constants.RAW_DATA_SIZE,
             "caCertificate length")
         .isEqual(
-            (int) caCertificate[CalypsoCaCertificateV1Constants.TYPE_OFFSET],
-            CalypsoCaCertificateV1Constants.TYPE,
-            "CA certificate type")
+            (int) caCertificate[0], CalypsoCaCertificateV1Constants.TYPE, "CA certificate type")
         .isEqual(
-            (int) caCertificate[CalypsoCaCertificateV1Constants.VERSION_OFFSET],
+            (int) caCertificate[1],
             CalypsoCaCertificateV1Constants.VERSION,
-            "CA certificate type");
+            "CA certificate version");
 
-    // Extract the certificate reference and check if already present
-    byte[] certificateReference =
-        Arrays.copyOfRange(
-            caCertificate,
-            CalypsoCaCertificateV1Constants.TARGET_KEY_REFERENCE_OFFSET,
-            CalypsoCaCertificateV1Constants.TARGET_KEY_REFERENCE_OFFSET
-                + CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE);
+    CaCertificateSpi caCertificateSpi = new CalypsoCaCertificateV1Adapter(caCertificate);
 
-    String certificateReferenceKey = HexUtil.toHex(certificateReference);
+    // Get the issuer public key reference
+    byte[] issuerKeyRef = caCertificateSpi.getIssuerPublicKeyReference();
 
-    if (publicKeyReferenceToCaCertificateContentSpi.containsKey(certificateReferenceKey)) {
-      throw new IllegalStateException(MSG_THE_PROVIDED_PUBLIC_KEY_REFERENCE_ALREADY_IN_THE_STORE);
+    // Search the issuer certificate
+    CaCertificateContentSpi issuerCertificateContent = caCertificates.get(issuerKeyRef);
+    if (issuerCertificateContent == null) {
+      throw new IllegalStateException(MSG_THE_ISSUER_CERTIFICATE_IS_NOT_REGISTERED + issuerKeyRef);
     }
 
-    // Extract the parent certificate reference and check if already present
-    byte[] parentCertificateReference =
-        Arrays.copyOfRange(
-            caCertificate,
-            CalypsoCaCertificateV1Constants.ISSUER_KEY_REFERENCE_OFFSET,
-            CalypsoCaCertificateV1Constants.ISSUER_KEY_REFERENCE_OFFSET
-                + CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE);
-
-    String parentCertificateReferenceKey = HexUtil.toHex(parentCertificateReference);
-
-    CaCertificateContentSpi parentCertificate =
-        publicKeyReferenceToCaCertificateContentSpi.get(parentCertificateReferenceKey);
-
-    if (parentCertificate == null) {
-      throw new IllegalStateException(
-          "Parent certificate not found. Reference: " + parentCertificateReferenceKey);
-    }
-
-    // Create a new CA certificate from the raw data, check it and add its content to the map
+    // Check the CA certificate using the issuer's certificate content
+    CaCertificateContentSpi caCertificateContent;
     try {
-      CalypsoCaCertificateV1Adapter certificateAdapter =
-          new CalypsoCaCertificateV1Adapter(caCertificate);
-      publicKeyReferenceToCaCertificateContentSpi.put(
-          parentCertificateReferenceKey,
-          certificateAdapter.checkCertificateAndGetContent(parentCertificate));
+      caCertificateContent =
+          caCertificateSpi.checkCertificateAndGetContent(issuerCertificateContent);
     } catch (CertificateValidationException e) {
-      throw new CertificateConsistencyException(
-          "Check of the certificate fails: " + e.getMessage(), e);
+      throw new CertificateConsistencyException(MSG_INVALID_CERTIFICATE + e.getMessage(), e);
     } catch (AsymmetricCryptoException e) {
       throw new CertificateConsistencyException(
-          "An error occurred while checking the CA certificate: " + e.getMessage(), e);
+          MSG_AN_ERROR_OCCURS_DURING_THE_CHECK_OF_THE_CERTIFICATE + e.getMessage(), e);
     }
+
+    // Save the certificate content into the store
+    String caKeyRef = HexUtil.toHex(caCertificateContent.getPublicKeyReference());
+    if (caCertificates.containsKey(caKeyRef)) {
+      throw new IllegalStateException(
+          MSG_A_CERTIFICATE_IS_ALREADY_REGISTERED_FOR_THE_PROVIDED_PUBLIC_KEY_REFERENCE + caKeyRef);
+    }
+    caCertificates.put(caKeyRef, caCertificateContent);
+
     return this;
   }
 
@@ -196,7 +202,7 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
    * @return null if the certificate is not found.
    * @since 0.1.0
    */
-  CaCertificateContentSpi getCertificate(byte[] caPublicKeyReference) {
-    return publicKeyReferenceToCaCertificateContentSpi.get(HexUtil.toHex(caPublicKeyReference));
+  CaCertificateContentSpi getCertificateContent(byte[] caPublicKeyReference) {
+    return caCertificates.get(HexUtil.toHex(caPublicKeyReference));
   }
 }

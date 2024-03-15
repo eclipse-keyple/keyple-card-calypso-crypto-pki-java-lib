@@ -13,19 +13,19 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import java.nio.ByteBuffer;
 import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
+import java.util.Arrays;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CaCertificate;
-import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateSpi;
-import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertificateSpi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Adapter of {@link CardCertificateSpi} for Calypso V1-compliant CA certificates.
+ * Adapter of {@link CaCertificate} for Calypso V1-compliant CA certificates.
  *
  * @since 0.1.0
  */
@@ -34,26 +34,24 @@ final class CalypsoCaCertificateV1Adapter
 
   private static final Logger logger = LoggerFactory.getLogger(CalypsoCaCertificateV1Adapter.class);
 
-  private static final String MSG_CERTIFICATE_AID_MISMATCH_PARENT_CERTIFICATE_AID =
-      "Certificate AID mismatch parent certificate AID";
-  private static final String MSG_ALLOWED = "allowed";
-  private static final String MSG_FORBIDDEN = "forbidden";
-
   private final ByteBuffer certificateRawData;
-  private final byte[] issuerKeyReference;
-  private byte[] caTargetKeyReference;
+  private final byte[] issuerKeyReference =
+      new byte[CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE];
+  private final byte[] caTargetKeyReference =
+      new byte[CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE];
   private long startDate;
+  private byte caScope;
   private long endDate;
-  private byte[] caTargetAidValue;
+  private byte[] aid;
   private boolean isAidTruncated;
   private boolean isCardCertificatesAuthenticationAllowed;
   private boolean isCaCertificatesAuthenticationAllowed;
   private PublicKey caPublicKey;
 
   /**
-   * Initializes a CalypsoCaCertificateV1Adapter object with the provided card output data.
+   * Constructor
    *
-   * @param cardOutputData The card output data containing the certificate.
+   * @param cardOutputData The card output data containing the certificate as a 384-byte byte array.
    * @since 0.1.0
    */
   CalypsoCaCertificateV1Adapter(byte[] cardOutputData) {
@@ -63,7 +61,6 @@ final class CalypsoCaCertificateV1Adapter
 
     // Extract issuer key reference
     certificateRawData.position(CalypsoCaCertificateV1Constants.ISSUER_KEY_REFERENCE_OFFSET);
-    issuerKeyReference = new byte[CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE];
     certificateRawData.get(issuerKeyReference);
   }
 
@@ -95,66 +92,75 @@ final class CalypsoCaCertificateV1Adapter
               + ") not allowed to authenticate a CA certificate");
     }
 
+    byte[] recoveredData =
+        CertificateUtils.checkCertificateSignatureAndRecoverData(
+            certificateRawData.array(), (RSAPublicKey) issuerCertificateContent.getPublicKey());
+
+    parseContent(recoveredData);
+
+    checkCaScope();
+    checkDates();
+    checkAid(issuerCertificateContent);
+
+    return this;
+  }
+
+  private void parseContent(byte[] recoveredData)
+      throws CertificateValidationException, AsymmetricCryptoException {
+
     // Target key reference
     certificateRawData.position(CalypsoCaCertificateV1Constants.TARGET_KEY_REFERENCE_OFFSET);
-    caTargetKeyReference = new byte[CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE];
     certificateRawData.get(caTargetKeyReference);
 
     // Start date
     startDate = certificateRawData.getInt();
 
-    long currentDate = CertificateUtils.getCurrentDateAsBcdLong();
-
-    // Check start date
-    if (startDate != 0 && currentDate < startDate) {
-      throw new CertificateConsistencyException(
-          "Certificate not yet valid. Start date: " + HexUtil.toHex(startDate));
-    }
-
-    // RFU1
+    // skip RFU1
     certificateRawData.position(
-        certificateRawData.position() + CalypsoCaCertificateV1Constants.RFU1_SIZE); // skip RFU1
+        certificateRawData.position() + CalypsoCaCertificateV1Constants.RFU1_SIZE);
 
     // CaRights
     byte caRights = certificateRawData.get();
-    checkCaRights(caRights);
-    isCardCertificatesAuthenticationAllowed =
-        checkAndGetCardCertificateAuthenticationAuthorization(caRights);
-    isCaCertificatesAuthenticationAllowed =
-        checkAndGetCaCertificateAuthenticationAuthorization(caRights);
+    isCardCertificatesAuthenticationAllowed = (caRights & 4) == 0; // true if b3 == 0
+    isCaCertificatesAuthenticationAllowed = (caRights & 1) == 0; // true if b0 == 0
 
     // CaScope
-    checkCaScope(certificateRawData.get());
+    caScope = certificateRawData.get();
 
     // End date
     endDate = certificateRawData.getInt();
 
-    if (endDate != 0 && currentDate > endDate) {
-      throw new CertificateConsistencyException(
-          "Certificate expired. End date: " + HexUtil.toHex(endDate));
+    // Check AID target size and create the expected caTargetAidValue
+    byte caTargetAidSize = certificateRawData.get();
+    if (caTargetAidSize == (byte) 0xFF) {
+      // no AID
+      certificateRawData.position(
+          certificateRawData.position() + CalypsoCaCertificateV1Constants.AID_SIZE_MAX);
+    } else if (caTargetAidSize >= CalypsoCaCertificateV1Constants.AID_SIZE_MIN
+        && caTargetAidSize <= CalypsoCaCertificateV1Constants.AID_SIZE_MAX) {
+      aid = new byte[caTargetAidSize];
+      certificateRawData.get(aid);
+      // Move buffer position after reading AID
+      certificateRawData.position(
+          certificateRawData.position()
+              + CalypsoCaCertificateV1Constants.AID_SIZE_MAX
+              - caTargetAidSize);
+    } else {
+      throw new CertificateValidationException(
+          "Bad target AID size: " + caTargetAidSize + ", expected between 5 and 16");
     }
 
-    // Check AID target size and create the expected caTargetAidValue
-    caTargetAidValue = checkAndGetAidValue(certificateRawData);
-
     // Determine if the AID is truncated analyzing the CA operating mode
-    isAidTruncated = checkAndGetOperatingMode(certificateRawData.get());
+    byte caOperatingMode = certificateRawData.get();
+    isAidTruncated = (caOperatingMode & 1) == 1; // true if b0 == 1
 
-    // Verify if the AID is consistent with the parent profile
-    checkAidAgainstParentAid(issuerCertificateContent);
-
-    // RFU 2
+    // skip RFU2
     certificateRawData.position(
-        certificateRawData.position() + CalypsoCaCertificateV1Constants.RFU2_SIZE); // skip RFU2
+        certificateRawData.position() + CalypsoCaCertificateV1Constants.RFU2_SIZE);
 
     // Public key header
     byte[] caPublicKeyHeader = new byte[CalypsoCaCertificateV1Constants.PUBLIC_KEY_HEADER_SIZE];
     certificateRawData.get(caPublicKeyHeader);
-
-    // Verify the signature and recover the data (the 222 first bytes of public key)
-    byte[] recoveredData =
-        CertificateUtils.checkCertificateSignatureAndRecoverData(
-            certificateRawData.array(), issuerCertificateContent);
 
     // Combines the recovered data and the header transmitted in clear to create the CA public key
     byte[] caPublicKeyModulus = new byte[CalypsoCaCertificateV1Constants.RSA_KEY_SIZE];
@@ -162,109 +168,20 @@ final class CalypsoCaCertificateV1Adapter
     System.arraycopy(
         recoveredData, 0, caPublicKeyModulus, caPublicKeyHeader.length, recoveredData.length);
     caPublicKey = CertificateUtils.generateRSAPublicKeyFromModulus(caPublicKeyModulus);
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Calypso CA certificate V1");
-      logger.debug("Target public key reference {}", HexUtil.toHex(issuerKeyReference));
-      logger.debug("Issuer public key reference {}", HexUtil.toHex(caTargetKeyReference));
-      logger.debug("Start date: {}", HexUtil.toHex(startDate));
-      logger.debug("End date: {}", HexUtil.toHex(endDate));
-      logger.debug(
-          "Card certificate authentication: {}",
-          isCardCertificatesAuthenticationAllowed ? MSG_ALLOWED : MSG_FORBIDDEN);
-      logger.debug(
-          "CA certificate authentication: {}",
-          isCaCertificatesAuthenticationAllowed ? MSG_ALLOWED : MSG_FORBIDDEN);
-      logger.debug(
-          "Scope: {}", PkiExtensionService.getInstance().isTestMode() ? "test" : "production");
-      logger.debug(
-          "Target AID: {}",
-          caTargetAidValue == null ? "unspecified" : HexUtil.toHex(caTargetAidValue));
-      if (caTargetAidValue != null) {
-        logger.debug("AID truncation: {}", isAidTruncated ? MSG_ALLOWED : MSG_FORBIDDEN);
-      }
-    }
-
-    return this;
   }
 
-  /**
-   * Checks the format of CA rights.
-   *
-   * @param caRights The byte representing the rights of the certificate.
-   * @throws CertificateValidationException If the upper four bits of caRights are non-zero.
-   */
-  private void checkCaRights(byte caRights) throws CertificateValidationException {
-    // Check if any of the four most significant bits are set to 1.
-    if ((caRights & 0xF0) != 0) {
-      throw new CertificateValidationException(
-          "Upper four bits of caRights must be zero: " + HexUtil.toHex(caRights));
-    }
-  }
-
-  /**
-   * Checks and gets the card certificate authentication authorization based on the given CA rights.
-   *
-   * @param caRights The byte representing the rights of the certificate.
-   * @return true if card certificate authentication is allowed, false otherwise.
-   * @throws CertificateValidationException If the certificate authentication authorization value is
-   *     unexpected.
-   */
-  private boolean checkAndGetCardCertificateAuthenticationAuthorization(byte caRights)
-      throws CertificateValidationException {
-    int rights = (caRights & 0x0C) >> 2;
-    if (rights == 1) {
-      return false;
-    } else if (rights == 0 || rights == 2) {
-      return true;
-    } else {
-      throw new CertificateValidationException(
-          "Unexpected card certificate authentication authorization value: "
-              + HexUtil.toHex(caRights));
-    }
-  }
-
-  /**
-   * Checks and gets the CA Certificate authentication authorization based on the given CA rights.
-   *
-   * @param caRights The byte representing the rights of the certificate.
-   * @return true if CA Certificate authentication is allowed, false otherwise.
-   * @throws CertificateValidationException If the certificate authentication authorization value is
-   *     unexpected.
-   */
-  private boolean checkAndGetCaCertificateAuthenticationAuthorization(byte caRights)
-      throws CertificateValidationException {
-    int rights = caRights & 0x03;
-    if (rights == 1) {
-      return false;
-    } else if (rights == 0 || rights == 2) {
-      return true;
-    } else {
-      throw new CertificateValidationException(
-          "Unexpected CA certificate authentication authorization value: "
-              + HexUtil.toHex(caRights));
-    }
-  }
-
-  /**
-   * Checks the scope of the certificate with regard to the context.
-   *
-   * @param caScope The byte value representing the scope of the certificate.
-   * @throws CertificateValidationException If the certificate scope is invalid.
-   */
-  private void checkCaScope(byte caScope) throws CertificateValidationException {
-    // check the scope of the certificate with regard to the context
+  private void checkCaScope() throws CertificateValidationException {
     switch (caScope) {
       case 0x00:
         if (PkiExtensionService.getInstance().isTestMode()) {
           throw new CertificateValidationException(
-              "Test certificate not allowed in production context");
+              "Production certificate not allowed in test context");
         }
         break;
       case 0x01:
         if (!PkiExtensionService.getInstance().isTestMode()) {
           throw new CertificateValidationException(
-              "Production certificate not allowed in test context");
+              "Test certificate not allowed in production context");
         }
         break;
       case (byte) 0xFF:
@@ -276,74 +193,44 @@ final class CalypsoCaCertificateV1Adapter
     }
   }
 
-  /**
-   * Checks and gets the target AID value based on the given buffer.
-   *
-   * @param buffer The ByteBuffer containing the certificate data.
-   * @return The target AID value as a byte array.
-   * @throws CertificateValidationException If the target AID size is invalid.
-   */
-  private byte[] checkAndGetAidValue(ByteBuffer buffer) throws CertificateValidationException {
-    byte caTargetAidSize = buffer.get();
-    if (caTargetAidSize == (byte) 0xFF) {
-      buffer.position(buffer.position() + CalypsoCaCertificateV1Constants.AID_SIZE_MAX);
-      return null; // no AID NOSONAR
-    } else if (caTargetAidSize >= CalypsoCaCertificateV1Constants.AID_SIZE_MIN
-        && caTargetAidSize <= CalypsoCaCertificateV1Constants.AID_SIZE_MAX) {
-      byte[] aid = new byte[caTargetAidSize];
-      buffer.position(
-          buffer.position() + caTargetAidSize); // Move buffer position after reading AID
-      return aid;
-    } else {
+  private void checkDates() throws CertificateValidationException {
+
+    long currentDate = CertificateUtils.getCurrentDateAsBcdLong();
+
+    if (startDate != 0 && currentDate < startDate) {
       throw new CertificateValidationException(
-          "Bad target AID size: " + caTargetAidSize + ", expected between 5 and 16");
+          "Certificate not yet valid. Start date: " + HexUtil.toHex(startDate));
+    }
+
+    if (endDate != 0 && currentDate > endDate) {
+      logger.warn("Certificate expired. End date: {}", HexUtil.toHex(endDate));
     }
   }
 
-  /**
-   * Checks and gets the operating mode based on the given byte value.
-   *
-   * @param caOperatingMode The byte value representing the operating mode.
-   * @return true if the operating mode is 1 (test), false if the operating mode is 0 (production).
-   * @throws CertificateValidationException If the operating mode value is unexpected.
-   */
-  private boolean checkAndGetOperatingMode(byte caOperatingMode)
+  private void checkAid(CaCertificateContentSpi issuerCertificateContent)
       throws CertificateValidationException {
-    if (caOperatingMode == 0) {
-      return false;
-    } else if (caOperatingMode == 1) {
-      return true;
-    } else {
-      throw new CertificateValidationException(
-          "Unexpected operating mode value: " + HexUtil.toHex(caOperatingMode));
+
+    if (!issuerCertificateContent.isAidCheckRequested()) {
+      return;
     }
-  }
 
-  /**
-   * Checks the AID value of the given issuerCertificateContent against the parent certificate AID.
-   *
-   * @param issuerCertificateContent The issuer certificate content.
-   * @throws CertificateValidationException If the AID values mismatch.
-   */
-  private void checkAidAgainstParentAid(CaCertificateContentSpi issuerCertificateContent)
-      throws CertificateValidationException {
-    if (issuerCertificateContent.isAidCheckRequested()) {
-      byte[] issuerAid = issuerCertificateContent.getAid();
+    byte[] issuerAid = issuerCertificateContent.getAid();
 
-      int compareLength =
-          issuerCertificateContent.isAidTruncated() ? issuerAid.length : caTargetAidValue.length;
+    boolean isAidValid = true;
 
-      if (caTargetAidValue.length < compareLength || issuerAid.length < compareLength) {
-        throw new CertificateValidationException(
-            MSG_CERTIFICATE_AID_MISMATCH_PARENT_CERTIFICATE_AID);
+    if (issuerCertificateContent.isAidTruncated()) {
+      if (aid.length < issuerAid.length
+          || !Arrays.equals(Arrays.copyOf(aid, issuerAid.length), issuerAid)) {
+        isAidValid = false;
       }
-
-      for (int i = 0; i < compareLength; i++) {
-        if (caTargetAidValue[i] != issuerAid[i]) {
-          throw new CertificateValidationException(
-              MSG_CERTIFICATE_AID_MISMATCH_PARENT_CERTIFICATE_AID);
-        }
+    } else {
+      if (!Arrays.equals(aid, issuerAid)) {
+        isAidValid = false;
       }
+    }
+
+    if (!isAidValid) {
+      throw new CertificateValidationException("Certificate AID mismatch parent certificate AID");
     }
   }
 
@@ -394,7 +281,7 @@ final class CalypsoCaCertificateV1Adapter
    */
   @Override
   public boolean isAidCheckRequested() {
-    return caTargetAidValue != null;
+    return aid != null;
   }
 
   /**
@@ -414,7 +301,7 @@ final class CalypsoCaCertificateV1Adapter
    */
   @Override
   public byte[] getAid() {
-    return caTargetAidValue;
+    return aid;
   }
 
   /**
@@ -435,5 +322,34 @@ final class CalypsoCaCertificateV1Adapter
   @Override
   public boolean isCardCertificatesAuthenticationAllowed() {
     return isCardCertificatesAuthenticationAllowed;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
+  @Override
+  public String toString() {
+    return "CalypsoCaCertificateV1Adapter{"
+        + "caScope="
+        + HexUtil.toHex(caScope)
+        + ", issuerKeyReference="
+        + HexUtil.toHex(issuerKeyReference)
+        + ", caTargetKeyReference="
+        + HexUtil.toHex(caTargetKeyReference)
+        + ", startDate="
+        + HexUtil.toHex(startDate)
+        + ", endDate="
+        + HexUtil.toHex(endDate)
+        + ", aid="
+        + HexUtil.toHex(aid)
+        + ", isAidTruncated="
+        + isAidTruncated
+        + ", isCardCertificatesAuthenticationAllowed="
+        + isCardCertificatesAuthenticationAllowed
+        + ", isCaCertificatesAuthenticationAllowed="
+        + isCaCertificatesAuthenticationAllowed
+        + '}';
   }
 }

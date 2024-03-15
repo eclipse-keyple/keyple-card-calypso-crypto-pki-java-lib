@@ -11,14 +11,13 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
 import org.eclipse.keyple.core.util.Assert;
-import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.eclipse.keypop.calypso.certificate.CalypsoCaCertificateV1Generator;
 import org.eclipse.keypop.calypso.certificate.spi.CalypsoCertificateSignerSpi;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 
 /**
  * Adapter of {@link CalypsoCaCertificateV1Generator} dedicated to the creation of CA certificates.
@@ -27,7 +26,7 @@ import org.eclipse.keypop.calypso.certificate.spi.CalypsoCertificateSignerSpi;
  */
 final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertificateV1Generator {
 
-  private final byte[] issuerPublicKeyReference;
+  private final CaCertificateContentSpi issuerCertificateContent;
   private final CalypsoCertificateSignerSpi caCertificateSigner;
   private RSAPublicKey caPublicKey;
   private byte[] caPublicKeyReference;
@@ -41,13 +40,14 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
   /**
    * Constructor.
    *
-   * @param issuerPublicKeyReference The certificate public key reference.
+   * @param issuerCertificateContent The issuer certificate content.
    * @param caCertificateSigner The signer to use to generate the signature.
    * @since 0.1.0
    */
   CalypsoCaCertificateV1GeneratorAdapter(
-      byte[] issuerPublicKeyReference, CalypsoCertificateSignerSpi caCertificateSigner) {
-    this.issuerPublicKeyReference = issuerPublicKeyReference;
+      CaCertificateContentSpi issuerCertificateContent,
+      CalypsoCertificateSignerSpi caCertificateSigner) {
+    this.issuerCertificateContent = issuerCertificateContent;
     this.caCertificateSigner = caCertificateSigner;
   }
 
@@ -59,20 +59,17 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
   @Override
   public CalypsoCaCertificateV1Generator withCaPublicKey(
       byte[] caPublicKeyReference, RSAPublicKey caPublicKey) {
+
     Assert.getInstance()
         .notNull(caPublicKeyReference, "caPublicKeyReference")
-        .isEqual(caPublicKeyReference.length, 29, "caPublicKeyReference length")
+        .isEqual(
+            caPublicKeyReference.length,
+            CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE,
+            "caPublicKeyReference length")
         .notNull(caPublicKey, "caPublicKey");
 
-    // Check if the RSA public key is 2048 bits
-    if (caPublicKey.getModulus().bitLength() != 2048) {
-      throw new IllegalArgumentException("Public key must be 2048 bits");
-    }
-
-    // Check if the RSA public key's modulus is equal to 65537
-    if (!caPublicKey.getPublicExponent().equals(BigInteger.valueOf(65537))) {
-      throw new IllegalArgumentException("Public key's modulus must be 65537");
-    }
+    // Check if the RSA public key has the expected characteristics (size and exponent)
+    CertificateUtils.checkRSA2048PublicKey(caPublicKey);
 
     this.caPublicKey = caPublicKey;
     this.caPublicKeyReference = caPublicKeyReference;
@@ -151,6 +148,9 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
    */
   @Override
   public byte[] generate() {
+
+    // TODO Check consistency with current value and issuer content
+
     ByteBuffer certificateRawData =
         ByteBuffer.allocate(CalypsoCaCertificateV1Constants.RAW_DATA_SIZE);
 
@@ -159,13 +159,11 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
     // Version
     certificateRawData.put(CalypsoCaCertificateV1Constants.VERSION);
     // Issuer public key reference
-    certificateRawData.put(issuerPublicKeyReference);
+    certificateRawData.put(issuerCertificateContent.getPublicKeyReference());
     // Certificate public key reference
     certificateRawData.put(caPublicKeyReference);
     // Start date
-    certificateRawData.put(
-        ByteArrayUtil.extractBytes(
-            startDateBcd, CalypsoCaCertificateV1Constants.VALIDITY_DATE_SIZE));
+    certificateRawData.putInt((int) startDateBcd);
     // RFU1
     certificateRawData.putInt(0);
     // CA rights
@@ -173,10 +171,9 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
     // CA scope
     certificateRawData.put(caScope);
     // End date
-    certificateRawData.put(
-        ByteArrayUtil.extractBytes(endDateBcd, CalypsoCaCertificateV1Constants.VALIDITY_DATE_SIZE));
+    certificateRawData.putInt((int) endDateBcd);
     // Target AID size
-    certificateRawData.put((byte) (aid.length & 0xFF));
+    certificateRawData.put((byte) aid.length);
     // Target AID
     certificateRawData.put(aid);
     byte[] padding = new byte[CalypsoCaCertificateV1Constants.AID_SIZE_MAX - aid.length];

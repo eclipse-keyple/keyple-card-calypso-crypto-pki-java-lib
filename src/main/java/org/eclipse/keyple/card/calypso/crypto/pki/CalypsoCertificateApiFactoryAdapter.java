@@ -12,11 +12,13 @@
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import org.eclipse.keyple.core.util.Assert;
+import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.certificate.CalypsoCaCertificateV1Generator;
 import org.eclipse.keypop.calypso.certificate.CalypsoCardCertificateV1Generator;
 import org.eclipse.keypop.calypso.certificate.CalypsoCertificateApiFactory;
 import org.eclipse.keypop.calypso.certificate.CalypsoCertificateStore;
 import org.eclipse.keypop.calypso.certificate.spi.CalypsoCertificateSignerSpi;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 
 /**
  * Adapter of {@link CalypsoCertificateApiFactory}.
@@ -43,12 +45,29 @@ final class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateApi
   @Override
   public CalypsoCaCertificateV1Generator createCalypsoCaCertificateV1Generator(
       byte[] issuerPublicKeyReference, CalypsoCertificateSignerSpi caCertificateSigner) {
+
     Assert.getInstance()
         .notNull(issuerPublicKeyReference, "issuerPublicKeyReference")
-        .isEqual(issuerPublicKeyReference.length, 29, "issuerPublicKeyReference length")
+        .isEqual(
+            issuerPublicKeyReference.length,
+            CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE,
+            "issuerPublicKeyReference length")
         .notNull(caCertificateSigner, "caCertificateSigner");
+
+    CaCertificateContentSpi issuerCertificateContent =
+        ((CalypsoCertificateStoreAdapter)
+                PkiExtensionService.getInstance()
+                    .getCalypsoCertificateApiFactory()
+                    .getCalypsoCertificateStore())
+            .getCertificateContent(issuerPublicKeyReference);
+
+    if (issuerCertificateContent == null) {
+      throw new IllegalStateException(
+          "Issuer public key not found. Reference: " + HexUtil.toHex(issuerPublicKeyReference));
+    }
+
     return new CalypsoCaCertificateV1GeneratorAdapter(
-        issuerPublicKeyReference, caCertificateSigner);
+        issuerCertificateContent, caCertificateSigner);
   }
 
   /**
@@ -59,11 +78,28 @@ final class CalypsoCertificateApiFactoryAdapter implements CalypsoCertificateApi
   @Override
   public CalypsoCardCertificateV1Generator createCalypsoCardCertificateV1Generator(
       byte[] issuerPublicKeyReference, CalypsoCertificateSignerSpi cardCertificateSigner) {
+
     Assert.getInstance()
         .notNull(issuerPublicKeyReference, "issuerPublicKeyReference")
-        .isEqual(issuerPublicKeyReference.length, 29, "issuerPublicKeyReference length")
+        .isEqual(
+            issuerPublicKeyReference.length,
+            CalypsoCardCertificateV1Constants.KEY_REFERENCE_SIZE,
+            "issuerPublicKeyReference length")
         .notNull(cardCertificateSigner, "cardCertificateSigner");
+
+    CaCertificateContentSpi issuerCertificateContent =
+        ((CalypsoCertificateStoreAdapter)
+                PkiExtensionService.getInstance()
+                    .getCalypsoCertificateApiFactory()
+                    .getCalypsoCertificateStore())
+            .getCertificateContent(issuerPublicKeyReference);
+
+    if (issuerCertificateContent == null) {
+      throw new IllegalStateException(
+          "Issuer public key not found. Reference: " + HexUtil.toHex(issuerPublicKeyReference));
+    }
+
     return new CalypsoCardCertificateV1GeneratorAdapter(
-        issuerPublicKeyReference, cardCertificateSigner);
+        issuerCertificateContent, cardCertificateSigner);
   }
 }

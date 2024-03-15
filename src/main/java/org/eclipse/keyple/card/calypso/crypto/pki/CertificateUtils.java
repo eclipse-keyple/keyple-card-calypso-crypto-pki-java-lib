@@ -27,7 +27,6 @@ import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.signers.ISO9796d2PSSSigner;
 import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
-import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 
 /**
  * Provides utility methods for field format and cryptographic operations.
@@ -36,7 +35,7 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificat
  */
 class CertificateUtils {
 
-  static final int RSA_SIGNATURE_SIZE = 256;
+  private static final int RSA_SIGNATURE_SIZE = 256;
 
   /** Private constructor */
   private CertificateUtils() {}
@@ -110,17 +109,14 @@ class CertificateUtils {
    * process.
    *
    * @param certificate The byte array containing the certificate data along with the signature.
-   * @param issuerCertificateContent The certificate content of the issuer, used to extract the
-   *     public key for signature verification.
+   * @param issuerPublicKey The issuer public key.
    * @return a byte array containing the recovered message data if the signature is valid.
    * @throws AsymmetricCryptoException If there is an issue with the cryptographic operations.
    * @throws CertificateConsistencyException If the signature verification fails.
    * @since 0.1.0
    */
   static byte[] checkCertificateSignatureAndRecoverData(
-      byte[] certificate, CaCertificateContentSpi issuerCertificateContent)
-      throws AsymmetricCryptoException {
-    RSAPublicKey issuerPublicKey = (RSAPublicKey) issuerCertificateContent.getPublicKey();
+      byte[] certificate, RSAPublicKey issuerPublicKey) throws AsymmetricCryptoException {
     RSAKeyParameters pubParams =
         new RSAKeyParameters(
             false, issuerPublicKey.getModulus(), issuerPublicKey.getPublicExponent());

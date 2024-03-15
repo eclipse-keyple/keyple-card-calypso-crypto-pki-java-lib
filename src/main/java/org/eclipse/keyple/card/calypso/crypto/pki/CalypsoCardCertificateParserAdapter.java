@@ -18,8 +18,8 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertific
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CardCertificateSpi;
 
 /**
- * Adapter for {@link CardCertificateParserSpi} dedicated to the parsing of Calypso version 1
- * compliant card certificates.
+ * Adapter for {@link CardCertificateParser} dedicated to the parsing of Calypso version 1 compliant
+ * card certificates.
  *
  * @since 0.1.0
  */
@@ -29,7 +29,7 @@ final class CalypsoCardCertificateParserAdapter
   /**
    * Constructor.
    *
-   * @since 0.1.0 ;
+   * @since 0.1.0
    */
   CalypsoCardCertificateParserAdapter() {}
 
@@ -52,22 +52,28 @@ final class CalypsoCardCertificateParserAdapter
   public CardCertificateSpi parseCertificate(byte[] cardOutputData)
       throws CertificateValidationException {
 
-    if (cardOutputData[CalypsoCardCertificateV1Constants.TYPE_OFFSET]
-        != CalypsoCardCertificateV1Constants.TYPE) {
+    if (cardOutputData.length != CalypsoCardCertificateV1Constants.RAW_DATA_SIZE) {
       throw new CertificateValidationException(
-          "Invalid card certificate type: Expected "
-              + HexUtil.toHex(CalypsoCardCertificateV1Constants.TYPE)
+          "Invalid card certificate size: expected "
+              + CalypsoCardCertificateV1Constants.RAW_DATA_SIZE
               + ", but got "
-              + HexUtil.toHex(cardOutputData[CalypsoCardCertificateV1Constants.TYPE_OFFSET]));
+              + cardOutputData.length);
     }
 
-    if (cardOutputData[CalypsoCardCertificateV1Constants.VERSION]
-        != CalypsoCardCertificateV1Constants.VERSION) {
+    if (cardOutputData[0] != CalypsoCardCertificateV1Constants.TYPE) {
       throw new CertificateValidationException(
-          "Invalid card certificate version: Expected "
+          "Invalid card certificate type: expected "
+              + HexUtil.toHex(CalypsoCardCertificateV1Constants.TYPE)
+              + ", but got "
+              + HexUtil.toHex(cardOutputData[0]));
+    }
+
+    if (cardOutputData[1] != CalypsoCardCertificateV1Constants.VERSION) {
+      throw new CertificateValidationException(
+          "Invalid card certificate version: expected "
               + HexUtil.toHex(CalypsoCardCertificateV1Constants.VERSION)
               + ", but got "
-              + HexUtil.toHex(cardOutputData[CalypsoCardCertificateV1Constants.VERSION_OFFSET]));
+              + HexUtil.toHex(cardOutputData[1]));
     }
 
     return new CalypsoCardCertificateV1Adapter(cardOutputData);

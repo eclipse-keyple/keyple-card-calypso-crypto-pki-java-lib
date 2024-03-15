@@ -37,8 +37,6 @@ class CalypsoCaCertificateV1Constants {
 
   static final int RECOVERED_DATA_SIZE = 222;
 
-  static final int TYPE_OFFSET = 0;
-  static final int VERSION_OFFSET = 1;
   static final int ISSUER_KEY_REFERENCE_OFFSET = 2;
   static final int TARGET_KEY_REFERENCE_OFFSET = ISSUER_KEY_REFERENCE_OFFSET + KEY_REFERENCE_SIZE;
 

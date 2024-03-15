@@ -16,7 +16,7 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.transaction.spi.AsymmetricCr
 import org.eclipse.keypop.calypso.crypto.asymmetric.transaction.spi.AsymmetricCryptoCardTransactionManagerSpi;
 
 /**
- * Adapter of {@link AsymmetricCryptoCardTransactionManagerFactorySpi}.
+ * Adapter of {@link AsymmetricCryptoCardTransactionManagerFactory}.
  *
  * @since 0.1.0
  */

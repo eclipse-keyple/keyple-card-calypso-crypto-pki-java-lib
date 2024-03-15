@@ -12,49 +12,32 @@
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
 import org.eclipse.keypop.calypso.card.transaction.spi.PcaCertificate;
-import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.PcaCertificateSpi;
 
 /**
- * Adapter of {@link PcaCertificateSpi}.
+ * Adapter of {@link PcaCertificate}.
  *
  * @since 0.1.0
  */
 final class PcaCertificateAdapter
     implements PcaCertificate, PcaCertificateSpi, CaCertificateContentSpi {
 
-  private final byte[] pcaPublicKeyReference;
-  private final PublicKey pcaPublicKey;
+  private final byte[] publicKeyReference;
+  private final RSAPublicKey publicKey;
 
   /**
    * Creates an instance from a public key and its reference.
    *
-   * @param pcaPublicKeyReference The public key reference.
-   * @param pcaPublicKey The public key.
+   * @param publicKeyReference The public key reference.
+   * @param publicKey The public key.
    * @since 0.1.0
    */
-  PcaCertificateAdapter(byte[] pcaPublicKeyReference, PublicKey pcaPublicKey) {
-    this.pcaPublicKeyReference = pcaPublicKeyReference;
-    this.pcaPublicKey = pcaPublicKey;
-  }
-
-  /**
-   * Creates an instance from a public key modulus and its reference.
-   *
-   * @param pcaPublicKeyReference The public key reference.
-   * @param pcaPublicKeyModulus The public key modulus.
-   * @throws IllegalArgumentException If the provided data is invalid.
-   * @since 0.1.0
-   */
-  PcaCertificateAdapter(byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus) {
-    this.pcaPublicKeyReference = pcaPublicKeyReference;
-    try {
-      this.pcaPublicKey = CertificateUtils.generateRSAPublicKeyFromModulus(pcaPublicKeyModulus);
-    } catch (AsymmetricCryptoException e) {
-      throw new IllegalArgumentException(e.getMessage(), e);
-    }
+  PcaCertificateAdapter(byte[] publicKeyReference, RSAPublicKey publicKey) {
+    this.publicKeyReference = publicKeyReference;
+    this.publicKey = publicKey;
   }
 
   /**
@@ -74,7 +57,7 @@ final class PcaCertificateAdapter
    */
   @Override
   public PublicKey getPublicKey() {
-    return pcaPublicKey;
+    return publicKey;
   }
 
   /**
@@ -84,7 +67,7 @@ final class PcaCertificateAdapter
    */
   @Override
   public byte[] getPublicKeyReference() {
-    return pcaPublicKeyReference;
+    return publicKeyReference;
   }
 
   /**

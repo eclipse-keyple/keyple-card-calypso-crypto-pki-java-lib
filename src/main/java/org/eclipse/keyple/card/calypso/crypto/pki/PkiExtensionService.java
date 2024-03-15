@@ -17,6 +17,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.card.transaction.spi.*;
 import org.eclipse.keypop.calypso.certificate.CalypsoCertificateApiFactory;
+import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 
 /**
  * Extension service dedicated to the management of Calypso PKI card transaction and certificate
@@ -82,7 +83,9 @@ public class PkiExtensionService {
   }
 
   /**
-   * Creates a Primary Certificate Authority (PCA) from a provided 2048-bit RSA public key.
+   * Creates a {@link PcaCertificate} from a provided 2048-bit RSA public key with a public exponent
+   * equal to 65537, to be injected as root certificate of the chain of trust in the security
+   * settings of a card PKI transaction.
    *
    * @param pcaPublicKeyReference The PCA public key reference (29 bytes).
    * @param pcaPublicKey The PCA public key (2048-bit RSA key with public exponent equal to 65537).
@@ -95,7 +98,10 @@ public class PkiExtensionService {
 
     Assert.getInstance()
         .notNull(pcaPublicKeyReference, "pcaPublicKeyReference")
-        .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length")
+        .isEqual(
+            pcaPublicKeyReference.length,
+            CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE,
+            "pcaPublicKeyReference length")
         .notNull(pcaPublicKey, "pcaPublicKey");
 
     CertificateUtils.checkRSA2048PublicKey(pcaPublicKey);
@@ -105,8 +111,9 @@ public class PkiExtensionService {
   }
 
   /**
-   * Creates a Primary Certificate Authority (PCA) certificate from a provided 2048-bit RSA key
-   * modulus.
+   * Creates a {@link PcaCertificate} from a provided 2048-bit RSA key modulus with a public
+   * exponent equal to 65537, to be injected as root certificate of the chain of trust in the
+   * security settings of a card PKI transaction.
    *
    * @param pcaPublicKeyReference The PCA public key reference (29 bytes).
    * @param pcaPublicKeyModulus The RSA public key modulus (256 bytes).
@@ -120,21 +127,33 @@ public class PkiExtensionService {
 
     Assert.getInstance()
         .notNull(pcaPublicKeyReference, "pcaPublicKeyReference")
-        .isEqual(pcaPublicKeyReference.length, 29, "pcaPublicKeyReference length")
+        .isEqual(
+            pcaPublicKeyReference.length,
+            CalypsoCaCertificateV1Constants.KEY_REFERENCE_SIZE,
+            "pcaPublicKeyReference length")
         .notNull(pcaPublicKeyModulus, "pcaPublicKeyModulus")
-        .isEqual(pcaPublicKeyModulus.length, 256, "pcaPublicKeyModulus length");
+        .isEqual(
+            pcaPublicKeyModulus.length,
+            CalypsoCaCertificateV1Constants.RSA_KEY_SIZE,
+            "pcaPublicKeyModulus length");
+
+    RSAPublicKey pcaPublicKey;
+    try {
+      pcaPublicKey = CertificateUtils.generateRSAPublicKeyFromModulus(pcaPublicKeyModulus);
+    } catch (AsymmetricCryptoException e) {
+      throw new IllegalArgumentException(e.getMessage(), e);
+    }
 
     isTestModeConfigurable = false; // force test mode to be set first
-    return new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKeyModulus);
+    return new PcaCertificateAdapter(pcaPublicKeyReference, pcaPublicKey);
   }
 
   /**
-   * Creates a Certificate Authority (CA) certificate from raw data provided as a byte array.
+   * Creates a {@link CaCertificate} from raw data of a CA certificate provided as a 384-byte byte
+   * array, to be injected as intermediate certificate of the chain of trust in the security
+   * settings of a card PKI transaction.
    *
-   * <p>This method takes a raw byte array representation of a CA certificate and parses it into a
-   * usable {@link CaCertificate} object.
-   *
-   * <p>In addition to the signature check, a validation of the certificate validity period is done.
+   * <p>Currently, only CA certificates conforming to Calypso format V1 are supported.
    *
    * @param caCertificate The 384-byte byte array containing the CA certificate data.
    * @return A non-null reference.
@@ -142,6 +161,7 @@ public class PkiExtensionService {
    * @since 0.1.0
    */
   public CaCertificate createCaCertificate(byte[] caCertificate) {
+
     Assert.getInstance()
         .notNull(caCertificate, "caCertificate")
         .isEqual(
@@ -153,61 +173,66 @@ public class PkiExtensionService {
             (int) caCertificate[1],
             CalypsoCaCertificateV1Constants.VERSION,
             "caCertificate version");
+
     isTestModeConfigurable = false; // force test mode to be set first
     return new CalypsoCaCertificateV1Adapter(caCertificate);
   }
 
   /**
-   * Creates a {@link CaCertificateParser} object specifically tailored to parse the given CA
-   * certificate type.
+   * Creates a {@link CaCertificateParser} object specifically tailored to parse card CA
+   * certificates having the given CA certificate type, to be injected in the security settings of a
+   * card PKI transaction.
    *
    * <p>This method selects and instantiates the appropriate {@link CaCertificateParser}
    * implementation based on the provided {@link CaCertificateType}. This ensures that the parser is
    * capable of handling the specific format and structure of the certificate type, enabling
    * accurate parsing and data extraction.
    *
+   * <p>Currently, only CA certificates conforming to Calypso format V1 are supported.
+   *
    * @param caCertificateType The type of CA certificate to be parsed, indicating the expected
    *     format and structure.
    * @return A non-null reference.
-   * @throws UnsupportedOperationException If the specified type is not supported by this factory.
+   * @throws IllegalArgumentException If the specified type null.
    * @since 0.1.0
    */
   public CaCertificateParser createCaCertificateParser(CaCertificateType caCertificateType) {
+
+    Assert.getInstance().notNull(caCertificateType, "caCertificateType");
+
     isTestModeConfigurable = false; // force test mode to be set first
-    if (caCertificateType == CaCertificateType.CALYPSO) {
-      return new CalypsoCaCertificateParserAdapter();
-    }
-    throw new UnsupportedOperationException(
-        "Unsupported CA certificate type: " + caCertificateType);
+    return new CalypsoCaCertificateParserAdapter();
   }
 
   /**
-   * Creates a {@link CardCertificateParser} object specifically tailored to parse the given card
-   * certificate type.
+   * Creates a {@link CardCertificateParser} object specifically tailored to parse card certificates
+   * having the given card certificate type, to be injected in the security settings of a card PKI
+   * transaction.
    *
    * <p>This method selects and instantiates the appropriate {@link CardCertificateParser}
    * implementation based on the provided {@link CardCertificateType}. This ensures that the parser
    * is capable of handling the specific format and structure of the certificate type, enabling
    * accurate parsing and data extraction.
    *
+   * <p>Currently, only card certificates conforming to Calypso format V1 are supported.
+   *
    * @param cardCertificateType The type of card certificate to be parsed, indicating the expected
    *     format and structure.
    * @return A non-null reference.
-   * @throws UnsupportedOperationException If the specified type is not supported by this factory.
+   * @throws IllegalArgumentException If the specified type null.
    * @since 0.1.0
    */
   public CardCertificateParser createCardCertificateParser(
       CardCertificateType cardCertificateType) {
+
+    Assert.getInstance().notNull(cardCertificateType, "cardCertificateType");
+
     isTestModeConfigurable = false; // force test mode to be set first
-    if (cardCertificateType == CardCertificateType.CALYPSO) {
-      return new CalypsoCardCertificateParserAdapter();
-    }
-    throw new UnsupportedOperationException(
-        "Unsupported card certificate type: " + cardCertificateType);
+    return new CalypsoCardCertificateParserAdapter();
   }
 
   /**
-   * Get the factory for creating Calypso certificate.
+   * Returns the factory to use for generating Calypso certificates.
    *
    * @return A non-null reference.
    * @since 0.1.0

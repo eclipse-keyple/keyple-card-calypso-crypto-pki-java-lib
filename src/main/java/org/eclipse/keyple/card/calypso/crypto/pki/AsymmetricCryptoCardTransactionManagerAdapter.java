@@ -11,7 +11,6 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.security.*;
 import java.security.spec.*;
@@ -26,7 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Adapter of {@link AsymmetricCryptoCardTransactionManagerSpi}.
+ * Adapter of {@link AsymmetricCryptoCardTransactionManagerSpi} & {@link
+ * CardTransactionCryptoExtension}.
  *
  * @since 0.1.0
  */
@@ -46,7 +46,7 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
   private boolean isRequest = true;
 
   /**
-   * Constructs a new instance of {@link AsymmetricCryptoCardTransactionManagerAdapter}.
+   * Constructor
    *
    * <p>Initializes the necessary cryptographic components used for card transaction management.
    *
@@ -91,13 +91,7 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       PublicKey publicKey = keyFactory.generatePublic(ecPublicKeySpec);
       signature.initVerify(publicKey);
       signature.update((byte) 0x10); // see requirement R203
-    } catch (InvalidKeySpecException e) {
-      throw new AsymmetricCryptoException(e.getMessage(), e);
-    } catch (SignatureException e) {
-      throw new AsymmetricCryptoException(e.getMessage(), e);
-    } catch (IllegalArgumentException e) {
-      throw new AsymmetricCryptoException(e.getMessage(), e);
-    } catch (InvalidKeyException e) {
+    } catch (Exception e) {
       throw new AsymmetricCryptoException(e.getMessage(), e);
     }
   }
@@ -111,7 +105,6 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
   public void updateTerminalPkiSession(byte[] cardApdu) throws AsymmetricCryptoException {
     try {
       byte[] dataToHash;
-      // TODO Verify this
       if (isRequest && cardApdu[4] == cardApdu.length - 6) {
         // case 4 command, we ignore Le
         dataToHash = Arrays.copyOf(cardApdu, cardApdu.length - 1);
@@ -125,7 +118,7 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       signature.update((byte) dataToHash.length);
       signature.update(dataToHash);
       isRequest = !isRequest;
-    } catch (SignatureException e) {
+    } catch (Exception e) {
       throw new AsymmetricCryptoException(e.getMessage(), e);
     }
   }
@@ -150,9 +143,7 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
               });
       byte[] asn1EncodedSignature = asn1Signature.getEncoded();
       return signature.verify(asn1EncodedSignature);
-    } catch (SignatureException e) {
-      throw new AsymmetricCryptoException(e.getMessage(), e);
-    } catch (IOException e) {
+    } catch (Exception e) {
       throw new AsymmetricCryptoException(e.getMessage(), e);
     }
   }

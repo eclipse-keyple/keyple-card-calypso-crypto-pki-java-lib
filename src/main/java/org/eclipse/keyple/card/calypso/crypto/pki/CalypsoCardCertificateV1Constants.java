@@ -38,8 +38,6 @@ class CalypsoCardCertificateV1Constants {
   static final int RFU_SIZE = 18;
   static final int ECC_PUBLIC_KEY_SIZE = 64;
 
-  static final int TYPE_OFFSET = 0;
-  static final int VERSION_OFFSET = 1;
   static final int ISSUER_KEY_REFERENCE_OFFSET = 2;
 
   private CalypsoCardCertificateV1Constants() {}

@@ -1,6 +1,6 @@
 @startuml
 title
-    Keyple - Adapter of keyple-card-calypso-crypto-pki-java-lib - 0.1.0 (2024-03-08)
+    Keyple - Adapter of keyple-card-calypso-crypto-pki-java-lib - 0.1.0 (2024-03-15)
 end title
 
 ' == THEME ==
@@ -130,8 +130,8 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +<back:yellow>PublicKey</back> getPublicKey ()
         +byte[] getPublicKeyReference ()
 
-        +Date getStartDate ()
-        +Date getEndDate ()
+        +long getStartDate ()
+        +long getEndDate ()
 
         +boolean isAidCheckRequested ()
         +boolean isAidTruncated ()
@@ -142,7 +142,6 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
     }
     ~class "<<<back:lightGreen>PcaCertificate</back>>>\n<<<back:pink>PcaCertificateSpi</back>>>\n<<<back:pink>CaCertificateContentSpi</back>>>\n**final** PcaCertificateAdapter" as PcaCertificateAdapter <<blue>> {
         ~PcaCertificateAdapter (byte[] publicKeyReference, <back:yellow>RSAPublicKey</back> publicKey)
-        ~PcaCertificateAdapter (byte[] publicKeyReference, byte[] publicKeyModulus)
 
         -- **PcaCertificateSpi** --
 
@@ -153,8 +152,8 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +<back:yellow>PublicKey</back> getPublicKey ()
         +byte[] getPublicKeyReference ()
 
-        +Date getStartDate ()
-        +Date getEndDate ()
+        +long getStartDate ()
+        +long getEndDate ()
 
         +boolean isAidCheckRequested ()
         +boolean isAidTruncated ()
@@ -175,14 +174,16 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
     ~class "<<<back:gold>CalypsoCertificateStore</back>>>\n**final** CalypsoCertificateStoreAdapter" as CalypsoCertificateStoreAdapter <<blue>> {
         ~{static} CalypsoCertificateStoreAdapter getInstance ()
 
+        ~<back:pink>CaCertificateContentSpi</back> getCertificateContent (byte[] caPublicKeyReference)
+
         -- **CalypsoCertificateStore** --
 
-        +<back:gold>CalypsoCertificateStore</back> addPcaPublicKey (byte[] pcaPublicKeyReference, <back:yellow>RSAPublicKey</back> pcaPublicKey)
-        +<back:gold>CalypsoCertificateStore</back> addPcaPublicKey (byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus)
-        +<back:gold>CalypsoCertificateStore</back> addCalypsoCaCertificate (byte[] caCertificate)
+        +void addPcaPublicKey (byte[] pcaPublicKeyReference, <back:yellow>RSAPublicKey</back> pcaPublicKey)
+        +void addPcaPublicKey (byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus)
+        +byte[] addCalypsoCaCertificate (byte[] caCertificate)
     }
     ~class "<<<back:gold>CalypsoCaCertificateV1Generator</back>>>\n**final** CalypsoCaCertificateV1GeneratorAdapter" as CalypsoCaCertificateV1GeneratorAdapter <<blue>> {
-        ~CalypsoCaCertificateV1GeneratorAdapter (byte[] issuerPublicKeyReference, <back:gold>CalypsoCertificateSigner</back> caCertificateSigner)
+        ~CalypsoCaCertificateV1GeneratorAdapter (<back:pink>CaCertificateContentSpi</back> issuerCertificateContent, <back:gold>CalypsoCertificateSigner</back> caCertificateSigner)
 
         -- **CalypsoCaCertificateV1Generator** --
 
@@ -195,7 +196,7 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +byte[] generate ()
     }
     ~class "<<<back:gold>CalypsoCardCertificateV1Generator</back>>>\n**final** CalypsoCardCertificateV1GeneratorAdapter" as CalypsoCardCertificateV1GeneratorAdapter <<blue>> {
-        ~CalypsoCardCertificateV1GeneratorAdapter (byte[] issuerPublicKeyReference, <back:gold>CalypsoCertificateSigner</back> cardCertificateSigner)
+        ~CalypsoCardCertificateV1GeneratorAdapter (<back:pink>CaCertificateContentSpi</back> issuerCertificateContent, <back:gold>CalypsoCertificateSigner</back> cardCertificateSigner)
 
         -- **CalypsoCardCertificateV1Generator** --
 
