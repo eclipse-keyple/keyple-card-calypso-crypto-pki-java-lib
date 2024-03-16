@@ -13,9 +13,9 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
-import java.util.Arrays;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CardCertificate;
+import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
@@ -136,7 +136,11 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
     parseContent(recoveredData);
 
     checkDates();
-    checkAid(issuerCertificateContent);
+
+    // Check AID consistency
+    if (!CertificateUtils.isAidValidForIssuer(cardAid, issuerCertificateContent)) {
+      throw new CertificateConsistencyException("Certificate AID mismatch parent certificate AID");
+    }
 
     return new CardPublicKeyAdapter(eccPublicKey);
   }
@@ -171,33 +175,6 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
 
     if (endDate != 0 && currentDate > endDate) {
       logger.warn("Certificate expired. End date: {}", HexUtil.toHex(endDate));
-    }
-  }
-
-  private void checkAid(CaCertificateContentSpi issuerCertificateContent)
-      throws CertificateValidationException {
-
-    if (!issuerCertificateContent.isAidCheckRequested()) {
-      return;
-    }
-
-    byte[] issuerAid = issuerCertificateContent.getAid();
-
-    boolean isAidValid = true;
-
-    if (issuerCertificateContent.isAidTruncated()) {
-      if (cardAid.length < issuerAid.length
-          || !Arrays.equals(Arrays.copyOf(cardAid, issuerAid.length), issuerAid)) {
-        isAidValid = false;
-      }
-    } else {
-      if (!Arrays.equals(cardAid, issuerAid)) {
-        isAidValid = false;
-      }
-    }
-
-    if (!isAidValid) {
-      throw new CertificateValidationException("Certificate AID mismatch parent certificate AID");
     }
   }
 

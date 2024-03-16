@@ -14,7 +14,6 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
 import java.nio.ByteBuffer;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.Arrays;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CaCertificate;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
@@ -100,7 +99,10 @@ final class CalypsoCaCertificateV1Adapter
 
     checkCaScope();
     checkDates();
-    checkAid(issuerCertificateContent);
+
+    if (!CertificateUtils.isAidValidForIssuer(aid, issuerCertificateContent)) {
+      throw new CertificateValidationException("Certificate AID mismatch parent certificate AID");
+    }
 
     return this;
   }
@@ -207,33 +209,6 @@ final class CalypsoCaCertificateV1Adapter
     }
   }
 
-  private void checkAid(CaCertificateContentSpi issuerCertificateContent)
-      throws CertificateValidationException {
-
-    if (!issuerCertificateContent.isAidCheckRequested()) {
-      return;
-    }
-
-    byte[] issuerAid = issuerCertificateContent.getAid();
-
-    boolean isAidValid = true;
-
-    if (issuerCertificateContent.isAidTruncated()) {
-      if (aid.length < issuerAid.length
-          || !Arrays.equals(Arrays.copyOf(aid, issuerAid.length), issuerAid)) {
-        isAidValid = false;
-      }
-    } else {
-      if (!Arrays.equals(aid, issuerAid)) {
-        isAidValid = false;
-      }
-    }
-
-    if (!isAidValid) {
-      throw new CertificateValidationException("Certificate AID mismatch parent certificate AID");
-    }
-  }
-
   /**
    * {@inheritDoc}
    *
@@ -252,6 +227,16 @@ final class CalypsoCaCertificateV1Adapter
   @Override
   public byte[] getPublicKeyReference() {
     return caTargetKeyReference;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @since 0.1.0
+   */
+  @Override
+  public byte getScope() {
+    return caScope;
   }
 
   /**

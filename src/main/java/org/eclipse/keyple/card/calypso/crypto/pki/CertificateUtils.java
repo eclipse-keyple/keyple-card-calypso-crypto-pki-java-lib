@@ -27,6 +27,7 @@ import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.signers.ISO9796d2PSSSigner;
 import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 
 /**
  * Provides utility methods for field format and cryptographic operations.
@@ -183,5 +184,27 @@ class CertificateUtils {
     long bcdMonth = ((long) (month / 10) << 4) | (month % 10);
     long bcdDay = ((long) (day / 10) << 4) | (day % 10);
     return (bcdYear << 16) | (bcdMonth << 8) | bcdDay;
+  }
+
+  static boolean isAidValidForIssuer(byte[] aid, CaCertificateContentSpi issuerCertificateContent) {
+    if (!issuerCertificateContent.isAidCheckRequested()) {
+      return true;
+    }
+
+    byte[] issuerAid = issuerCertificateContent.getAid();
+
+    boolean isAidValid = true;
+
+    if (issuerCertificateContent.isAidTruncated()) {
+      if (aid.length < issuerAid.length
+          || !Arrays.equals(Arrays.copyOf(aid, issuerAid.length), issuerAid)) {
+        isAidValid = false;
+      }
+    } else {
+      if (!Arrays.equals(aid, issuerAid)) {
+        isAidValid = false;
+      }
+    }
+    return isAidValid;
   }
 }

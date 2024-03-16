@@ -15,7 +15,9 @@ import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
 import org.eclipse.keyple.core.util.Assert;
+import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.certificate.CalypsoCaCertificateV1Generator;
+import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.certificate.spi.CalypsoCertificateSignerSpi;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 
@@ -149,7 +151,38 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
   @Override
   public byte[] generate() {
 
-    // TODO Check consistency with current value and issuer content
+    // Check scope consistency
+    if (issuerCertificateContent.getScope() != (byte) 0xFF
+        && caScope != issuerCertificateContent.getScope()) {
+      throw new CertificateConsistencyException(
+          "The scope of the generated certificate ("
+              + HexUtil.toHex(caScope)
+              + ") does not match the scope of the issuer's certificate ("
+              + HexUtil.toHex(issuerCertificateContent.getScope())
+              + ")");
+    }
+
+    // Dates consistency check
+    if (startDateBcd != 0 && issuerCertificateContent.getStartDate() > startDateBcd) {
+      throw new CertificateConsistencyException(
+          "The start date of the generated certificate ("
+              + HexUtil.toHex(issuerCertificateContent.getStartDate())
+              + ") is before the start date of the issuer's certificate "
+              + HexUtil.toHex(startDateBcd));
+    }
+
+    if (endDateBcd != 0 && issuerCertificateContent.getEndDate() < endDateBcd) {
+      throw new CertificateConsistencyException(
+          "The end date of the generated certificate ("
+              + HexUtil.toHex(issuerCertificateContent.getEndDate())
+              + ") is after the end date of the issuer's certificate "
+              + HexUtil.toHex(endDateBcd));
+    }
+
+    // Check AID consistency
+    if (!CertificateUtils.isAidValidForIssuer(aid, issuerCertificateContent)) {
+      throw new CertificateConsistencyException("Certificate AID mismatch parent certificate AID");
+    }
 
     ByteBuffer certificateRawData =
         ByteBuffer.allocate(CalypsoCaCertificateV1Constants.RAW_DATA_SIZE);
@@ -189,5 +222,31 @@ final class CalypsoCaCertificateV1GeneratorAdapter implements CalypsoCaCertifica
     // Generate the final certificate from the data and recoverable data
     return caCertificateSigner.generateSignedCertificate(
         certificateRawData.array(), recoverableData);
+  }
+
+  private void checkAid(CaCertificateContentSpi issuerCertificateContent) {
+
+    if (!issuerCertificateContent.isAidCheckRequested()) {
+      return;
+    }
+
+    byte[] issuerAid = issuerCertificateContent.getAid();
+
+    boolean isAidValid = true;
+
+    if (issuerCertificateContent.isAidTruncated()) {
+      if (aid.length < issuerAid.length
+          || !Arrays.equals(Arrays.copyOf(aid, issuerAid.length), issuerAid)) {
+        isAidValid = false;
+      }
+    } else {
+      if (!Arrays.equals(aid, issuerAid)) {
+        isAidValid = false;
+      }
+    }
+
+    if (!isAidValid) {
+      throw new CertificateConsistencyException("Certificate AID mismatch parent certificate AID");
+    }
   }
 }

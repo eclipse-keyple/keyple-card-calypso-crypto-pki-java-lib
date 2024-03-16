@@ -25,7 +25,7 @@ import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificat
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.PcaCertificateSpi;
 
 /**
- * Adapter of {@link CalypsoCertificateStore}. TODO change return type for add methods
+ * Adapter of {@link CalypsoCertificateStore}.
  *
  * @since 0.1.0
  */
@@ -71,8 +71,7 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
    * @since 0.1.0
    */
   @Override
-  public CalypsoCertificateStore addPcaPublicKey(
-      byte[] pcaPublicKeyReference, RSAPublicKey pcaPublicKey) {
+  public void addPcaPublicKey(byte[] pcaPublicKeyReference, RSAPublicKey pcaPublicKey) {
 
     Assert.getInstance()
         .notNull(pcaPublicKeyReference, "pcaPublicKeyReference")
@@ -108,7 +107,6 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
 
     // Add a new PCA certificate to the map
     caCertificates.put(pcaPublicKeyReferenceKey, certificateContent);
-    return this;
   }
 
   /**
@@ -117,8 +115,7 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
    * @since 0.1.0
    */
   @Override
-  public CalypsoCertificateStore addPcaPublicKey(
-      byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus) {
+  public void addPcaPublicKey(byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus) {
 
     Assert.getInstance()
         .notNull(pcaPublicKeyModulus, "pcaPublicKeyModulus")
@@ -136,7 +133,7 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
           MSG_AN_ERROR_OCCURS_DURING_THE_CHECK_OF_THE_PUBLIC_KEY + e.getMessage(), e);
     }
 
-    return addPcaPublicKey(pcaPublicKeyReference, pcaPublicKey);
+    addPcaPublicKey(pcaPublicKeyReference, pcaPublicKey);
   }
 
   /**
@@ -145,7 +142,7 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
    * @since 0.1.0
    */
   @Override
-  public CalypsoCertificateStore addCalypsoCaCertificate(byte[] caCertificate) {
+  public byte[] addCalypsoCaCertificate(byte[] caCertificate) {
 
     // For now, the only supported format is Calypso V1
     Assert.getInstance()
@@ -164,7 +161,7 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
     CaCertificateSpi caCertificateSpi = new CalypsoCaCertificateV1Adapter(caCertificate);
 
     // Get the issuer public key reference
-    byte[] issuerKeyRef = caCertificateSpi.getIssuerPublicKeyReference();
+    String issuerKeyRef = HexUtil.toHex(caCertificateSpi.getIssuerPublicKeyReference());
 
     // Search the issuer certificate
     CaCertificateContentSpi issuerCertificateContent = caCertificates.get(issuerKeyRef);
@@ -185,14 +182,16 @@ final class CalypsoCertificateStoreAdapter implements CalypsoCertificateStore {
     }
 
     // Save the certificate content into the store
-    String caKeyRef = HexUtil.toHex(caCertificateContent.getPublicKeyReference());
-    if (caCertificates.containsKey(caKeyRef)) {
+    byte[] caKeyRef = caCertificateContent.getPublicKeyReference();
+    String caKeyRefHex = HexUtil.toHex(caKeyRef);
+    if (caCertificates.containsKey(caKeyRefHex)) {
       throw new IllegalStateException(
-          MSG_A_CERTIFICATE_IS_ALREADY_REGISTERED_FOR_THE_PROVIDED_PUBLIC_KEY_REFERENCE + caKeyRef);
+          MSG_A_CERTIFICATE_IS_ALREADY_REGISTERED_FOR_THE_PROVIDED_PUBLIC_KEY_REFERENCE
+              + caKeyRefHex);
     }
-    caCertificates.put(caKeyRef, caCertificateContent);
+    caCertificates.put(caKeyRefHex, caCertificateContent);
 
-    return this;
+    return caKeyRef;
   }
 
   /**
