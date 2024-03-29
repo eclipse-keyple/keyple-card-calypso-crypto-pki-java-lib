@@ -1,6 +1,6 @@
 @startuml
 title
-    Keyple - Adapter of keyple-card-calypso-crypto-pki-java-lib - 0.1.0 (2024-03-15)
+    Keyple - Adapter of keyple-card-calypso-crypto-pki-java-lib - 0.1.0 (2024-03-29)
 end title
 
 ' == THEME ==
@@ -55,7 +55,6 @@ legend top
     __Colors legend__ :
     * __External public API references__ :
     ** <back:lightGreen>**Keypop Calypso Card API**</back>
-    ** <back:gold>**Keypop Calypso Certificate API**</back>
     * __External private API references__ :
     ** <back:pink>**Keypop Calypso Crypto Asymmetric API**</back>
     ** <back:yellow>java.security</back>
@@ -162,53 +161,6 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +boolean isCaCertificatesAuthenticationAllowed ()
         +boolean isCardCertificatesAuthenticationAllowed ()
     }
-    ~class "<<<back:gold>CalypsoCertificateApiFactory</back>>>\n**final** CalypsoCertificateApiFactoryAdapter" as CalypsoCertificateApiFactoryAdapter <<blue>> {
-        ~CalypsoCertificateApiFactoryAdapter ()
-
-        -- **CalypsoCertificateApiFactory** --
-
-        +<back:gold>CalypsoCertificateStore</back> getCalypsoCertificateStore ()
-        +<back:gold>CalypsoCaCertificateV1Generator</back> createCalypsoCaCertificateV1Generator (byte[] issuerPublicKeyReference, <back:gold>CalypsoCertificateSigner</back> caCertificateSigner)
-        +<back:gold>CalypsoCardCertificateV1Generator</back> createCalypsoCardCertificateV1Generator (byte[] issuerPublicKeyReference, <back:gold>CalypsoCertificateSigner</back> cardCertificateSigner)
-    }
-    ~class "<<<back:gold>CalypsoCertificateStore</back>>>\n**final** CalypsoCertificateStoreAdapter" as CalypsoCertificateStoreAdapter <<blue>> {
-        ~{static} CalypsoCertificateStoreAdapter getInstance ()
-
-        ~<back:pink>CaCertificateContentSpi</back> getCertificateContent (byte[] caPublicKeyReference)
-
-        -- **CalypsoCertificateStore** --
-
-        +void addPcaPublicKey (byte[] pcaPublicKeyReference, <back:yellow>RSAPublicKey</back> pcaPublicKey)
-        +void addPcaPublicKey (byte[] pcaPublicKeyReference, byte[] pcaPublicKeyModulus)
-        +byte[] addCalypsoCaCertificate (byte[] caCertificate)
-    }
-    ~class "<<<back:gold>CalypsoCaCertificateV1Generator</back>>>\n**final** CalypsoCaCertificateV1GeneratorAdapter" as CalypsoCaCertificateV1GeneratorAdapter <<blue>> {
-        ~CalypsoCaCertificateV1GeneratorAdapter (<back:pink>CaCertificateContentSpi</back> issuerCertificateContent, <back:gold>CalypsoCertificateSigner</back> caCertificateSigner)
-
-        -- **CalypsoCaCertificateV1Generator** --
-
-        +<back:gold>CalypsoCaCertificateV1Generator</back> withCaPublicKey (byte[] caPublicKeyReference, <back:yellow>RSAPublicKey</back> caPublicKey)
-        +<back:gold>CalypsoCaCertificateV1Generator</back> withStartDate (int year, int month, int day)
-        +<back:gold>CalypsoCaCertificateV1Generator</back> withEndDate (int year, int month, int day)
-        +<back:gold>CalypsoCaCertificateV1Generator</back> withTargetAid (byte[] aid, boolean isTruncated)
-        +<back:gold>CalypsoCaCertificateV1Generator</back> withCaRights (byte caRights)
-        +<back:gold>CalypsoCaCertificateV1Generator</back> withCaScope (byte caScope)
-        +byte[] generate ()
-    }
-    ~class "<<<back:gold>CalypsoCardCertificateV1Generator</back>>>\n**final** CalypsoCardCertificateV1GeneratorAdapter" as CalypsoCardCertificateV1GeneratorAdapter <<blue>> {
-        ~CalypsoCardCertificateV1GeneratorAdapter (<back:pink>CaCertificateContentSpi</back> issuerCertificateContent, <back:gold>CalypsoCertificateSigner</back> cardCertificateSigner)
-
-        -- **CalypsoCardCertificateV1Generator** --
-
-        +<back:gold>CalypsoCardCertificateV1Generator</back> withCardPublicKey (byte[] cardPublicKey)
-        +<back:gold>CalypsoCardCertificateV1Generator</back> withStartDate (int year, int month, int day)
-        +<back:gold>CalypsoCardCertificateV1Generator</back> withEndDate (int year, int month, int day)
-        +<back:gold>CalypsoCardCertificateV1Generator</back> withCardAid (byte[] aid)
-        +<back:gold>CalypsoCardCertificateV1Generator</back> withCardSerialNumber (byte[] serialNumber)
-        +<back:gold>CalypsoCardCertificateV1Generator</back> withCardStartupInfo (byte[] startupInfo)
-        +<back:gold>CalypsoCardCertificateV1Generator</back> withIndex (int index)
-        +byte[] generate ()
-    }
 }
 
 ' Associations
@@ -218,7 +170,6 @@ PkiExtensionService ...> PcaCertificateAdapter #C_LINK : create >
 PkiExtensionService ..> CalypsoCaCertificateParserAdapter #C_LINK : create >
 PkiExtensionService ..> CalypsoCaCertificateV1Adapter #C_LINK : create >
 PkiExtensionService ..> CalypsoCardCertificateParserAdapter #C_LINK : create >
-PkiExtensionService .....> CalypsoCertificateApiFactoryAdapter #C_LINK : create >
 
 AsymmetricCryptoCardTransactionManagerFactoryAdapter ..> AsymmetricCryptoCardTransactionManagerAdapter #C_LINK : create >
 
@@ -229,13 +180,6 @@ CalypsoCaCertificateParserAdapter ..> CalypsoCaCertificateV1Adapter #C_LINK : cr
 CalypsoCardCertificateParserAdapter ..> CalypsoCardCertificateV1Adapter #C_LINK : create >
 
 CalypsoCardCertificateV1Adapter ..> CardPublicKeyAdapter #C_LINK : create >
-
-CalypsoCertificateApiFactoryAdapter ..> CalypsoCertificateStoreAdapter #C_LINK : provide >
-CalypsoCertificateApiFactoryAdapter ...> CalypsoCaCertificateV1GeneratorAdapter #C_LINK : create >
-CalypsoCertificateApiFactoryAdapter ...> CalypsoCardCertificateV1GeneratorAdapter #C_LINK : create >
-
-CalypsoCertificateStoreAdapter .up...> PcaCertificateAdapter #C_LINK : create >
-CalypsoCertificateStoreAdapter .up.> CalypsoCaCertificateV1Adapter #C_LINK : create >
 
 ' == LAYOUT ==
 

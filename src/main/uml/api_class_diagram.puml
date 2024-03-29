@@ -1,6 +1,6 @@
 @startuml
 title
-    Keyple - keyple-card-calypso-crypto-pki-java-lib - 0.1.+ (2024-03-13)
+    Keyple - keyple-card-calypso-crypto-pki-java-lib - 0.1.+ (2024-03-29)
 end title
 
 ' == THEME ==
@@ -55,7 +55,6 @@ legend top
     __Colors legend__ :
     * __External API references__ :
     ** <back:pink>**Keypop Calypso Card API**</back>
-    ** <back:lightgreen>**Keypop Calypso Certificate API**</back>
     ** <back:yellow>java.security</back>
 end legend
 
@@ -76,8 +75,6 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
         +<back:pink>CaCertificateParser</back> createCaCertificateParser (CaCertificateType caCertificateType)
 
         +<back:pink>CardCertificateParser</back> createCardCertificateParser (CardCertificateType cardCertificateType)
-
-        +<back:lightgreen>CalypsoCertificateApiFactory</back> getCalypsoCertificateApiFactory ()
     }
     +enum CaCertificateType <<green>> {
         CALYPSO
