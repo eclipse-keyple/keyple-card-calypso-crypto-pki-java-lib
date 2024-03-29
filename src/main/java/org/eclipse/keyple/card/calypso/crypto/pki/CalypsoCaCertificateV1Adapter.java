@@ -205,7 +205,8 @@ final class CalypsoCaCertificateV1Adapter
     }
 
     if (endDate != 0 && currentDate > endDate) {
-      logger.warn("Certificate expired. End date: {}", HexUtil.toHex(endDate));
+      String endDateHex = HexUtil.toHex(endDate);
+      logger.warn("Certificate expired. End date: {}", endDateHex);
     }
   }
 

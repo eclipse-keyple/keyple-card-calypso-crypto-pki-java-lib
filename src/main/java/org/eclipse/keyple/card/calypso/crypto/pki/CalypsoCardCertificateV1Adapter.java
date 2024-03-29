@@ -15,7 +15,6 @@ import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import org.eclipse.keyple.core.util.HexUtil;
 import org.eclipse.keypop.calypso.card.transaction.spi.CardCertificate;
-import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
@@ -139,7 +138,7 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
 
     // Check AID consistency
     if (!CertificateUtils.isAidValidForIssuer(cardAid, issuerCertificateContent)) {
-      throw new CertificateConsistencyException("Certificate AID mismatch parent certificate AID");
+      throw new CertificateValidationException("Certificate AID mismatch parent certificate AID");
     }
 
     return new CardPublicKeyAdapter(eccPublicKey);
@@ -174,7 +173,8 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
     }
 
     if (endDate != 0 && currentDate > endDate) {
-      logger.warn("Certificate expired. End date: {}", HexUtil.toHex(endDate));
+      String endDateHex = HexUtil.toHex(endDate);
+      logger.warn("Certificate expired. End date: {}", endDateHex);
     }
   }
 

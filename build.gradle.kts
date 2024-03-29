@@ -33,7 +33,6 @@ dependencies {
     implementation("org.eclipse.keyple:keyple-common-java-api:2.0.0")
     implementation("org.eclipse.keypop:keypop-calypso-card-java-api:2.1.0-SNAPSHOT") { isChanging = true }
     implementation("org.eclipse.keypop:keypop-calypso-crypto-asymmetric-java-api:0.2.0-SNAPSHOT") { isChanging = true }
-    implementation("org.eclipse.keypop:keypop-calypso-certificate-java-api:0.1.0-SNAPSHOT") { isChanging = true }
     implementation("org.eclipse.keyple:keyple-util-java-lib:2.3.1")
     implementation("org.bouncycastle:bcprov-jdk15to18:1.74")
     implementation("org.bouncycastle:bcpkix-jdk15to18:1.74")

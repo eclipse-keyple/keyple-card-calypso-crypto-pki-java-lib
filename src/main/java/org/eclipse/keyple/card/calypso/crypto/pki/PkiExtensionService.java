@@ -16,7 +16,6 @@ import java.security.interfaces.RSAPublicKey;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.card.transaction.spi.*;
-import org.eclipse.keypop.calypso.certificate.CalypsoCertificateApiFactory;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
 
 /**
@@ -229,17 +228,6 @@ public class PkiExtensionService {
 
     isTestModeConfigurable = false; // force test mode to be set first
     return new CalypsoCardCertificateParserAdapter();
-  }
-
-  /**
-   * Returns the factory to use for generating Calypso certificates.
-   *
-   * @return A non-null reference.
-   * @since 0.1.0
-   */
-  public CalypsoCertificateApiFactory getCalypsoCertificateApiFactory() {
-    isTestModeConfigurable = false; // force test mode to be set first
-    return new CalypsoCertificateApiFactoryAdapter();
   }
 
   /**

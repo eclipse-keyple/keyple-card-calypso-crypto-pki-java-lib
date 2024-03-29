@@ -25,8 +25,8 @@ import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.engines.RSAEngine;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.signers.ISO9796d2PSSSigner;
-import org.eclipse.keypop.calypso.certificate.CertificateConsistencyException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
+import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.CertificateValidationException;
 import org.eclipse.keypop.calypso.crypto.asymmetric.certificate.spi.CaCertificateContentSpi;
 
 /**
@@ -104,7 +104,7 @@ class CertificateUtils {
    * last 256 bytes of the certificate array.
    *
    * <p>If the signature is successfully verified, the method returns the recovered message data; if
-   * the signature verification fails, it throws a {@link CertificateConsistencyException}.
+   * the signature verification fails, it throws a {@link CertificateValidationException}.
    *
    * <p>Note: This method assumes the use of SHA-256 for message digest during the signature
    * process.
@@ -113,11 +113,12 @@ class CertificateUtils {
    * @param issuerPublicKey The issuer public key.
    * @return a byte array containing the recovered message data if the signature is valid.
    * @throws AsymmetricCryptoException If there is an issue with the cryptographic operations.
-   * @throws CertificateConsistencyException If the signature verification fails.
+   * @throws CertificateValidationException If the signature verification fails.
    * @since 0.1.0
    */
   static byte[] checkCertificateSignatureAndRecoverData(
-      byte[] certificate, RSAPublicKey issuerPublicKey) throws AsymmetricCryptoException {
+      byte[] certificate, RSAPublicKey issuerPublicKey)
+      throws AsymmetricCryptoException, CertificateValidationException {
     RSAKeyParameters pubParams =
         new RSAKeyParameters(
             false, issuerPublicKey.getModulus(), issuerPublicKey.getPublicExponent());
@@ -140,7 +141,7 @@ class CertificateUtils {
     byte[] signature =
         Arrays.copyOfRange(certificate, certificate.length - 256, certificate.length);
     if (!pssSign.verifySignature(signature)) {
-      throw new CertificateConsistencyException("Challenge PSS certificate verification failed.");
+      throw new CertificateValidationException("Challenge PSS certificate verification failed.");
     }
 
     return pssSign.getRecoveredMessage();
