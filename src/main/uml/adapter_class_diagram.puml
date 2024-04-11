@@ -1,0 +1,191 @@
+@startuml
+title
+    Keyple - Adapter of keyple-card-calypso-crypto-pki-java-lib - 0.1.0 (2024-03-29)
+end title
+
+' == THEME ==
+
+'Couleurs issues de : https://htmlcolorcodes.com/fr/tableau-de-couleur/tableau-de-couleur-design-plat/
+!define C_GREY1 F8F9F9
+!define C_GREY2 F2F3F4
+!define C_GREY3 E5E7E9
+!define C_GREY4 D7DBDD
+!define C_GREY5 CACFD2
+!define C_GREY6 BDC3C7
+!define C_LINK 3498DB
+!define C_USE 27AE60
+
+' -- Styles that don't work with new version of plantuml --
+skinparam stereotypeABorderColor #A9DCDF
+skinparam stereotypeIBorderColor #B4A7E5
+skinparam stereotypeCBorderColor #ADD1B2
+skinparam stereotypeEBorderColor #EB93DF
+' -- END --
+
+skinparam ClassBorderThickness 2
+skinparam ArrowThickness 2
+
+' Yellow
+skinparam ClassBackgroundColor #FEFECE
+skinparam ClassBorderColor #D4AC0D
+' Red
+skinparam ClassBackgroundColor<<red>> #FDEDEC
+skinparam ClassBorderColor<<red>> #E74C3C
+hide <<red>> stereotype
+' Purple
+skinparam ClassBackgroundColor<<purple>> #F4ECF7
+skinparam ClassBorderColor<<purple>> #8E44AD
+hide <<purple>> stereotype
+' blue
+skinparam ClassBackgroundColor<<blue>> #EBF5FB
+skinparam ClassBorderColor<<blue>> #3498DB
+hide <<blue>> stereotype
+' Green
+skinparam ClassBackgroundColor<<green>> #E9F7EF
+skinparam ClassBorderColor<<green>> #27AE60
+hide <<green>> stereotype
+' Grey
+skinparam ClassBackgroundColor<<grey>> #EAECEE
+skinparam ClassBorderColor<<grey>> #2C3E50
+hide <<grey>> stereotype
+
+' == CONTENT ==
+
+legend top
+    __Colors legend__ :
+    * __External public API references__ :
+    ** <back:lightGreen>**Keypop Calypso Card API**</back>
+    * __External private API references__ :
+    ** <back:pink>**Keypop Calypso Crypto Asymmetric API**</back>
+    ** <back:yellow>java.security</back>
+end legend
+
+package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
+    +class "**final** PkiExtensionService" as PkiExtensionService <<green>> {
+        __
+        ~boolean isTestMode ()
+        ...
+    }
+    ' Adapters
+    ~class "<<<back:lightGreen>AsymmetricCryptoCardTransactionManagerFactory</back>>>\n<<<back:pink>AsymmetricCryptoCardTransactionManagerFactorySpi</back>>>\n**final** AsymmetricCryptoCardTransactionManagerFactoryAdapter" as AsymmetricCryptoCardTransactionManagerFactoryAdapter <<blue>> {
+        ~AsymmetricCryptoCardTransactionManagerFactoryAdapter ()
+
+        -- **AsymmetricCryptoCardTransactionManagerFactorySpi** --
+
+        +<back:pink>AsymmetricCryptoCardTransactionManagerSpi</back> createCardTransactionManager ()
+    }
+    ~class "<<<back:lightGreen>AsymmetricCryptoCardTransactionManager</back>>>\n<<<back:pink>AsymmetricCryptoCardTransactionManagerSpi</back>>>\n**final** AsymmetricCryptoCardTransactionManagerAdapter" as AsymmetricCryptoCardTransactionManagerAdapter <<blue>> {
+        ~AsymmetricCryptoCardTransactionManagerAdapter ()
+
+        -- **AsymmetricCryptoCardTransactionManagerSpi** --
+
+        +void initTerminalPkiSession (<back:pink>CardPublicKeySpi</back> cardPublicKey)
+        +void updateTerminalPkiSession (byte[] cardApdu)
+        +boolean isCardPkiSessionValid (byte[] cardSessionSignature)
+    }
+    ~class "<<<back:pink>CardPublicKeySpi</back>>>\n**final** CardPublicKeyAdapter" as CardPublicKeyAdapter <<blue>> {
+        ~CardPublicKeyAdapter (byte[] rawValue)
+
+        -- **CardPublicKeySpi** --
+
+        +byte[] getRawValue ()
+    }
+    ~class "<<<back:lightGreen>CardCertificateParser</back>>>\n<<<back:pink>CardCertificateParserSpi</back>>>\n**final** CalypsoCardCertificateParserAdapter" as CalypsoCardCertificateParserAdapter <<blue>> {
+        ~CalypsoCardCertificateParserAdapter ()
+
+        -- **CardCertificateParserSpi** --
+
+        +byte getCertificateType ()
+        +<back:pink>CardCertificateSpi</back> parseCertificate (byte[] cardOutputData)
+    }
+    ~class "<<<back:lightGreen>CardCertificate</back>>>\n<<<back:pink>CardCertificateSpi</back>>>\n**final** CalypsoCardCertificateV1Adapter" as CalypsoCardCertificateV1Adapter <<blue>> {
+        ~CalypsoCardCertificateV1Adapter (byte[] cardOutputData)
+
+        -- **CardCertificateSpi** --
+
+        +byte[] getIssuerPublicKeyReference ()
+        +byte[] getCardAid ()
+        +byte[] getCardSerialNumber ()
+        +<back:pink>CardPublicKeySpi</back> checkCertificateAndGetPublicKey (<back:pink>CaCertificateContentSpi</back> issuerCertificateContent)
+    }
+    ~class "<<<back:lightGreen>CaCertificateParser</back>>>\n<<<back:pink>CaCertificateParserSpi</back>>>\n**final** CalypsoCaCertificateParserAdapter" as CalypsoCaCertificateParserAdapter <<blue>> {
+        ~CalypsoCaCertificateParserAdapter ()
+
+        -- **CaCertificateParserSpi** --
+
+        +byte getCertificateType ()
+        +<back:pink>CaCertificateSpi</back> parseCertificate (byte[] cardOutputData)
+    }
+    ~class "<<<back:lightGreen>CaCertificate</back>>>\n<<<back:pink>CaCertificateSpi</back>>>\n<<<back:pink>CaCertificateContentSpi</back>>>\n**final** CalypsoCaCertificateV1Adapter" as CalypsoCaCertificateV1Adapter <<blue>> {
+        ~CalypsoCaCertificateV1Adapter (byte[] cardOutputData)
+
+        -- **CaCertificateSpi** --
+
+        +byte[] getIssuerPublicKeyReference ()
+        +<back:pink>CaCertificateContentSpi</back> checkCertificateAndGetContent (<back:pink>CaCertificateContentSpi</back> issuerCertificateContent)
+
+        -- **CaCertificateContentSpi** --
+
+        +<back:yellow>PublicKey</back> getPublicKey ()
+        +byte[] getPublicKeyReference ()
+
+        +long getStartDate ()
+        +long getEndDate ()
+
+        +boolean isAidCheckRequested ()
+        +boolean isAidTruncated ()
+        +byte[] getAid ()
+
+        +boolean isCaCertificatesAuthenticationAllowed ()
+        +boolean isCardCertificatesAuthenticationAllowed ()
+    }
+    ~class "<<<back:lightGreen>PcaCertificate</back>>>\n<<<back:pink>PcaCertificateSpi</back>>>\n<<<back:pink>CaCertificateContentSpi</back>>>\n**final** PcaCertificateAdapter" as PcaCertificateAdapter <<blue>> {
+        ~PcaCertificateAdapter (byte[] publicKeyReference, <back:yellow>RSAPublicKey</back> publicKey)
+
+        -- **PcaCertificateSpi** --
+
+        +<back:pink>CaCertificateContentSpi</back> checkCertificateAndGetContent ()
+
+        -- **CaCertificateContentSpi** --
+
+        +<back:yellow>PublicKey</back> getPublicKey ()
+        +byte[] getPublicKeyReference ()
+
+        +long getStartDate ()
+        +long getEndDate ()
+
+        +boolean isAidCheckRequested ()
+        +boolean isAidTruncated ()
+        +byte[] getAid ()
+
+        +boolean isCaCertificatesAuthenticationAllowed ()
+        +boolean isCardCertificatesAuthenticationAllowed ()
+    }
+}
+
+' Associations
+
+PkiExtensionService ..> AsymmetricCryptoCardTransactionManagerFactoryAdapter #C_LINK : create >
+PkiExtensionService ...> PcaCertificateAdapter #C_LINK : create >
+PkiExtensionService ..> CalypsoCaCertificateParserAdapter #C_LINK : create >
+PkiExtensionService ..> CalypsoCaCertificateV1Adapter #C_LINK : create >
+PkiExtensionService ..> CalypsoCardCertificateParserAdapter #C_LINK : create >
+
+AsymmetricCryptoCardTransactionManagerFactoryAdapter ..> AsymmetricCryptoCardTransactionManagerAdapter #C_LINK : create >
+
+AsymmetricCryptoCardTransactionManagerAdapter ..> CardPublicKeyAdapter #C_USE : use >
+
+CalypsoCaCertificateParserAdapter ..> CalypsoCaCertificateV1Adapter #C_LINK : create >
+
+CalypsoCardCertificateParserAdapter ..> CalypsoCardCertificateV1Adapter #C_LINK : create >
+
+CalypsoCardCertificateV1Adapter ..> CardPublicKeyAdapter #C_LINK : create >
+
+' == LAYOUT ==
+
+
+' == STYLE ==
+
+package pki #C_GREY1 {}
+
+@enduml
