@@ -236,16 +236,6 @@ final class CalypsoCaCertificateV1Adapter
    * @since 0.1.0
    */
   @Override
-  public byte getScope() {
-    return caScope;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @since 0.1.0
-   */
-  @Override
   public long getStartDate() {
     return startDate;
   }

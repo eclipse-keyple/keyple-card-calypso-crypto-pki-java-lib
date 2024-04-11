@@ -76,17 +76,6 @@ final class PcaCertificateAdapter
    * @since 0.1.0
    */
   @Override
-  public byte getScope() {
-    // no scope restriction
-    return (byte) 0xFF;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @since 0.1.0
-   */
-  @Override
   public long getStartDate() {
     // no start date defined for a PCA certificate
     return 0;
