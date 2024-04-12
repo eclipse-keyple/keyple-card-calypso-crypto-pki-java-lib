@@ -27,10 +27,10 @@ repositories {
     maven(url = "https://oss.sonatype.org/content/repositories/snapshots")
 }
 dependencies {
-    implementation("org.eclipse.keyple:keyple-common-java-api:2.0.1-SNAPSHOT") {isChanging=true}
-    implementation("org.eclipse.keypop:keypop-calypso-card-java-api:2.1.0-SNAPSHOT") { isChanging = true }
-    implementation("org.eclipse.keypop:keypop-calypso-crypto-asymmetric-java-api:0.2.0-SNAPSHOT") { isChanging = true }
-    implementation("org.eclipse.keyple:keyple-util-java-lib:2.3.2-SNAPSHOT") {isChanging=true}
+    implementation("org.eclipse.keyple:keyple-common-java-api:2.0.1")
+    implementation("org.eclipse.keypop:keypop-calypso-card-java-api:2.1.0")
+    implementation("org.eclipse.keypop:keypop-calypso-crypto-asymmetric-java-api:0.2.0")
+    implementation("org.eclipse.keyple:keyple-util-java-lib:2.4.0")
     implementation("org.bouncycastle:bcprov-jdk18on:1.78")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78")
     implementation("org.slf4j:slf4j-api:1.7.32")

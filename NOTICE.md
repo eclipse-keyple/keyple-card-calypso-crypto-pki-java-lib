@@ -46,10 +46,10 @@ Keypop Calypso Crypto Asymmetric API
 * License: [MIT](https://opensource.org/licenses/MIT)
 * Sources: https://github.com/eclipse-keypop/keypop-calypso-crypto-asymmetric-java-api
 
-Keypop Calypso Certificate API
+Bouncy Castle Crypto APIs
 
-* License: [MIT](https://opensource.org/licenses/MIT)
-* Sources: https://github.com/eclipse-keypop/keypop-calypso-certificate-java-api
+* License: [The Legion of the Bouncy Castle](https://www.bouncycastle.org/licence.html)
+* Project: https://www.bouncycastle.org/
 
 SLF4J API
 
