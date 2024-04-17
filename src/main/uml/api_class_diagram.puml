@@ -72,22 +72,18 @@ package "org.eclipse.keyple.card.calypso.crypto.pki" as pki {
 
         +<back:pink>CaCertificate</back> createCaCertificate (byte[] caCertificate)
 
-        +<back:pink>CaCertificateParser</back> createCaCertificateParser (CaCertificateType caCertificateType)
+        +<back:pink>CaCertificateParser</back> createCaCertificateParser (CertificateType certificateType)
 
-        +<back:pink>CardCertificateParser</back> createCardCertificateParser (CardCertificateType cardCertificateType)
+        +<back:pink>CardCertificateParser</back> createCardCertificateParser (CertificateType certificateType)
     }
-    +enum CaCertificateType <<green>> {
-        CALYPSO
-    }
-    +enum CardCertificateType <<green>> {
-        CALYPSO
+    +enum CertificateType <<green>> {
+        CALYPSO_LEGACY
     }
 }
 
 ' Associations
 
-PkiExtensionService ..> CaCertificateType #C_USE : use >
-PkiExtensionService ..> CardCertificateType #C_USE : use >
+PkiExtensionService ..> CertificateType #C_USE : use >
 
 ' == LAYOUT ==
 
