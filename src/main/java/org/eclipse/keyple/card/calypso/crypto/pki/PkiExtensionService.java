@@ -183,21 +183,21 @@ public class PkiExtensionService {
    * card PKI transaction.
    *
    * <p>This method selects and instantiates the appropriate {@link CaCertificateParser}
-   * implementation based on the provided {@link CaCertificateType}. This ensures that the parser is
+   * implementation based on the provided {@link CertificateType}. This ensures that the parser is
    * capable of handling the specific format and structure of the certificate type, enabling
    * accurate parsing and data extraction.
    *
    * <p>Currently, only CA certificates conforming to Calypso format V1 are supported.
    *
-   * @param caCertificateType The type of CA certificate to be parsed, indicating the expected
-   *     format and structure.
+   * @param certificateType The type of CA certificate to be parsed, indicating the expected format
+   *     and structure.
    * @return A non-null reference.
    * @throws IllegalArgumentException If the specified type null.
    * @since 0.1.0
    */
-  public CaCertificateParser createCaCertificateParser(CaCertificateType caCertificateType) {
+  public CaCertificateParser createCaCertificateParser(CertificateType certificateType) {
 
-    Assert.getInstance().notNull(caCertificateType, "caCertificateType");
+    Assert.getInstance().notNull(certificateType, "certificateType");
 
     isTestModeConfigurable = false; // force test mode to be set first
     return new CalypsoCaCertificateParserAdapter();
@@ -209,22 +209,21 @@ public class PkiExtensionService {
    * transaction.
    *
    * <p>This method selects and instantiates the appropriate {@link CardCertificateParser}
-   * implementation based on the provided {@link CardCertificateType}. This ensures that the parser
-   * is capable of handling the specific format and structure of the certificate type, enabling
+   * implementation based on the provided {@link CertificateType}. This ensures that the parser is
+   * capable of handling the specific format and structure of the certificate type, enabling
    * accurate parsing and data extraction.
    *
    * <p>Currently, only card certificates conforming to Calypso format V1 are supported.
    *
-   * @param cardCertificateType The type of card certificate to be parsed, indicating the expected
+   * @param certificateType The type of card certificate to be parsed, indicating the expected
    *     format and structure.
    * @return A non-null reference.
    * @throws IllegalArgumentException If the specified type null.
    * @since 0.1.0
    */
-  public CardCertificateParser createCardCertificateParser(
-      CardCertificateType cardCertificateType) {
+  public CardCertificateParser createCardCertificateParser(CertificateType certificateType) {
 
-    Assert.getInstance().notNull(cardCertificateType, "cardCertificateType");
+    Assert.getInstance().notNull(certificateType, "certificateType");
 
     isTestModeConfigurable = false; // force test mode to be set first
     return new CalypsoCardCertificateParserAdapter();
