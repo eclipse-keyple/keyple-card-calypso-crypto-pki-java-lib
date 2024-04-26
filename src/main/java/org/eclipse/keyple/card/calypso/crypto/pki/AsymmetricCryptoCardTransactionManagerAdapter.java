@@ -60,11 +60,7 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       algorithmParameters.init(new ECGenParameterSpec(EC_DOMAIN_PARAMETERS_NAME));
       ecParameterSpec = algorithmParameters.getParameterSpec(ECParameterSpec.class);
       keyFactory = KeyFactory.getInstance(ELLIPTIC_CURVE);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException(e.getMessage(), e);
-    } catch (NoSuchProviderException e) {
-      throw new IllegalStateException(e.getMessage(), e);
-    } catch (InvalidParameterSpecException e) {
+    } catch (NoSuchAlgorithmException | InvalidParameterSpecException | NoSuchProviderException e) {
       throw new IllegalStateException(e.getMessage(), e);
     }
   }
@@ -77,9 +73,9 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
   @Override
   public void initTerminalPkiSession(CardPublicKeySpi cardPublicKey)
       throws AsymmetricCryptoException {
-    if (logger.isDebugEnabled()) {
+    if (logger.isTraceEnabled()) {
       String cardPublicKeyHex = HexUtil.toHex(cardPublicKey.getRawValue());
-      logger.debug("Card public key: {}", cardPublicKeyHex);
+      logger.trace("Card public key: {}", cardPublicKeyHex);
     }
     try {
       byte[] cardPub = cardPublicKey.getRawValue();
@@ -111,9 +107,9 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       } else {
         dataToHash = cardApdu;
       }
-      if (logger.isDebugEnabled()) {
+      if (logger.isTraceEnabled()) {
         String dataToHashHex = HexUtil.toHex(dataToHash);
-        logger.debug("Update hash with: {}", dataToHashHex);
+        logger.trace("Update hash with: {}", dataToHashHex);
       }
       signature.update((byte) dataToHash.length);
       signature.update(dataToHash);

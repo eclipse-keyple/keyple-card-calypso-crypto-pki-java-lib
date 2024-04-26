@@ -141,7 +141,7 @@ class CertificateUtils {
     byte[] signature =
         Arrays.copyOfRange(certificate, certificate.length - 256, certificate.length);
     if (!pssSign.verifySignature(signature)) {
-      throw new CertificateValidationException("Challenge PSS certificate verification failed.");
+      throw new CertificateValidationException("Challenge PSS certificate verification failed");
     }
 
     return pssSign.getRecoveredMessage();
