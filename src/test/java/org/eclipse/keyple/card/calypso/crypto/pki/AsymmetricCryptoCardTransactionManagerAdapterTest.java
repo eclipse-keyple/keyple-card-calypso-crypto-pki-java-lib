@@ -28,6 +28,14 @@ public class AsymmetricCryptoCardTransactionManagerAdapterTest {
 
   private Signature mockSignature;
   private AsymmetricCryptoCardTransactionManagerAdapter adapter;
+  private static final String SIGNATURE_VALID =
+      "7D6E7314CA9B2E601FBF4CA144979B88F996D8A04D9F1E63E61CBECFBD0B0DE0ED84C5A052BFDAF1BC496762CE3ACB046C64959E1938ACA18DF97C278EFEE271";
+  private static final String SIGNATURE_INVALID =
+      "006E7314CA9B2E601FBF4CA144979B88F996D8A04D9F1E63E61CBECFBD0B0DE0ED84C5A052BFDAF1BC496762CE3ACB046C64959E1938ACA18DF97C278EFEE271";
+  private static final String ZERO_VALUE =
+      "0000000000000000000000000000000000000000000000000000000000000000";
+  private static final String VALID_VALUE =
+      "7D6E7314CA9B2E601FBF4CA144979B88F996D8A04D9F1E63E61CBECFBD0B0DE0";
 
   static {
     Security.addProvider(new BouncyCastleProvider());
@@ -49,9 +57,7 @@ public class AsymmetricCryptoCardTransactionManagerAdapterTest {
       throws Exception {
     // Mock a valid CardPublicKeySpi
     CardPublicKeySpi mockPublicKey = mock(CardPublicKeySpi.class);
-    byte[] validPublicKey =
-        HexUtil.toByteArray(
-            "7D6E7314CA9B2E601FBF4CA144979B88F996D8A04D9F1E63E61CBECFBD0B0DE0ED84C5A052BFDAF1BC496762CE3ACB046C64959E1938ACA18DF97C278EFEE271");
+    byte[] validPublicKey = HexUtil.toByteArray(SIGNATURE_VALID);
     when(mockPublicKey.getRawValue()).thenReturn(validPublicKey);
 
     // Create and initialize the adapter
@@ -67,9 +73,7 @@ public class AsymmetricCryptoCardTransactionManagerAdapterTest {
   public void initTerminalPkiSession_whenPublicKeyIsInvalid_shouldThrowICPE() throws Exception {
     // Mock an invalid CardPublicKeySpi
     CardPublicKeySpi mockPublicKey = mock(CardPublicKeySpi.class);
-    byte[] invalidPublicKey =
-        HexUtil.toByteArray(
-            "006E7314CA9B2E601FBF4CA144979B88F996D8A04D9F1E63E61CBECFBD0B0DE0ED84C5A052BFDAF1BC496762CE3ACB046C64959E1938ACA18DF97C278EFEE271");
+    byte[] invalidPublicKey = HexUtil.toByteArray(SIGNATURE_INVALID);
     when(mockPublicKey.getRawValue()).thenReturn(invalidPublicKey);
 
     // Create and initialize the adapter (should throw exception)
@@ -95,5 +99,23 @@ public class AsymmetricCryptoCardTransactionManagerAdapterTest {
 
     verify(mockSignature, times(1)).update((byte) 6);
     verify(mockSignature, times(1)).update(any(byte[].class));
+  }
+
+  @Test(expected = AsymmetricCryptoException.class)
+  public void isCardPkiSessionValid_whenBothComponentsAreZero_shouldThrowAsymmetricCryptoException()
+      throws Exception {
+    adapter.isCardPkiSessionValid(HexUtil.toByteArray(ZERO_VALUE + ZERO_VALUE));
+  }
+
+  @Test(expected = AsymmetricCryptoException.class)
+  public void isCardPkiSessionValid_whenRComponentIsZero_shouldThrowAsymmetricCryptoException()
+      throws Exception {
+    adapter.isCardPkiSessionValid(HexUtil.toByteArray(ZERO_VALUE + VALID_VALUE));
+  }
+
+  @Test(expected = AsymmetricCryptoException.class)
+  public void isCardPkiSessionValid_whenSComponentIsZero_shouldThrowAsymmetricCryptoException()
+      throws Exception {
+    adapter.isCardPkiSessionValid(HexUtil.toByteArray(VALID_VALUE + ZERO_VALUE));
   }
 }

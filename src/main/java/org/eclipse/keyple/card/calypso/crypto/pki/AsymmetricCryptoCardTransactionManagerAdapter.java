@@ -129,15 +129,21 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       throws AsymmetricCryptoException {
     try {
       // Creates a DER sequence containing the first 32 bytes and the next 32 bytes from
-      // cardSessionSignature as separate integers. Then, encodes the DER sequence into a byte
-      // array.
+      // cardSessionSignature as separate integers.
+      BigInteger r = new BigInteger(1, Arrays.copyOfRange(cardSessionSignature, 0, 32));
+      BigInteger s = new BigInteger(1, Arrays.copyOfRange(cardSessionSignature, 32, 64));
+
+      // Ensure that r and s are not zero to prevent invalid signatures
+      if (r.equals(BigInteger.ZERO) || s.equals(BigInteger.ZERO)) {
+        throw new AsymmetricCryptoException(
+            "Invalid ECDSA signature: r or s is zero, rejecting signature.");
+      }
+
+      // Encodes the DER sequence into a byte array.
       DERSequence asn1Signature =
-          new DERSequence(
-              new ASN1Integer[] {
-                new ASN1Integer(new BigInteger(1, Arrays.copyOfRange(cardSessionSignature, 0, 32))),
-                new ASN1Integer(new BigInteger(1, Arrays.copyOfRange(cardSessionSignature, 32, 64)))
-              });
+          new DERSequence(new ASN1Integer[] {new ASN1Integer(r), new ASN1Integer(s)});
       byte[] asn1EncodedSignature = asn1Signature.getEncoded();
+
       return signature.verify(asn1EncodedSignature);
     } catch (Exception e) {
       throw new AsymmetricCryptoException(e.getMessage(), e);
