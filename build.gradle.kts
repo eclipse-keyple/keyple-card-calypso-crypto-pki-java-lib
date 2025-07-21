@@ -30,6 +30,12 @@ dependencies {
   testImplementation("org.mockito:mockito-core:5.11.0")
 }
 
+// Set up strict targeting for Java 8. The 'release' option forces the compiler
+// to link against the Java 8 platform APIs, not just check syntax and bytecode version.
+// This is essential to prevent `NoSuchMethodError` exceptions when the code is built
+// with a modern JDK (11+) but run on a JRE 8.
+tasks.withType<JavaCompile> { options.release.set(8) }
+
 ///////////////////////////////////////////////////////////////////////////////
 //  STANDARD CONFIGURATION FOR JAVA PROJECTS
 ///////////////////////////////////////////////////////////////////////////////
