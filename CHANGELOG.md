@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- Removed explicit use of the BouncyCastle (`"BC"`) provider when selecting key factories and signature algorithms.  
+  The provider is now chosen automatically by the JVM/Android runtime.  
+  This change improves compatibility with Android (API 28+) where `KeyFactory.RSA` and similar algorithms are no longer
+  available through the `BC` provider.
 
 ## [0.2.2] - 2025-07-21
 ### Fixed

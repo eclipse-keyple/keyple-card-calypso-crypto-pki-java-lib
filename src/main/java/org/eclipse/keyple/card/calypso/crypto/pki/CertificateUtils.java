@@ -14,7 +14,6 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
 import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
@@ -80,15 +79,10 @@ class CertificateUtils {
     BigInteger publicExponent = BigInteger.valueOf(65537);
 
     try {
-      // Create RSAPublicKey using KeyFactory (assuming Bouncy Castle is available)
-      KeyFactory keyFactory = KeyFactory.getInstance("RSA", "BC");
+      KeyFactory keyFactory = KeyFactory.getInstance("RSA");
       return (RSAPublicKey)
           keyFactory.generatePublic(new RSAPublicKeySpec(modulusBigInt, publicExponent));
-    } catch (NoSuchAlgorithmException e) {
-      throw new AsymmetricCryptoException(e.getMessage(), e);
-    } catch (NoSuchProviderException e) {
-      throw new AsymmetricCryptoException(e.getMessage(), e);
-    } catch (InvalidKeySpecException e) {
+    } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
       throw new AsymmetricCryptoException(e.getMessage(), e);
     }
   }

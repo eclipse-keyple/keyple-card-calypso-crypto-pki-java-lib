@@ -37,7 +37,6 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       LoggerFactory.getLogger(AsymmetricCryptoCardTransactionManagerAdapter.class);
 
   private static final String CARD_SESSION_SIGNATURE_SCHEME = "SHA256withECDSA";
-  private static final String BOUNCY_CASTLE = "BC";
   private static final String ELLIPTIC_CURVE = "EC";
   private static final String EC_DOMAIN_PARAMETERS_NAME = "secp256r1";
   private final Signature signature;
@@ -55,12 +54,12 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
    */
   AsymmetricCryptoCardTransactionManagerAdapter() {
     try {
-      signature = Signature.getInstance(CARD_SESSION_SIGNATURE_SCHEME, BOUNCY_CASTLE);
+      signature = Signature.getInstance(CARD_SESSION_SIGNATURE_SCHEME);
       AlgorithmParameters algorithmParameters = AlgorithmParameters.getInstance(ELLIPTIC_CURVE);
       algorithmParameters.init(new ECGenParameterSpec(EC_DOMAIN_PARAMETERS_NAME));
       ecParameterSpec = algorithmParameters.getParameterSpec(ECParameterSpec.class);
       keyFactory = KeyFactory.getInstance(ELLIPTIC_CURVE);
-    } catch (NoSuchAlgorithmException | InvalidParameterSpecException | NoSuchProviderException e) {
+    } catch (NoSuchAlgorithmException | InvalidParameterSpecException e) {
       throw new IllegalStateException(e.getMessage(), e);
     }
   }
