@@ -28,10 +28,9 @@ public class AsymmetricCryptoCardTransactionManagerAdapterTest {
 
   private Signature mockSignature;
   private AsymmetricCryptoCardTransactionManagerAdapter adapter;
-  private static final String SIGNATURE_VALID =
+  private static final String ECC_KEY_VALID =
       "7D6E7314CA9B2E601FBF4CA144979B88F996D8A04D9F1E63E61CBECFBD0B0DE0ED84C5A052BFDAF1BC496762CE3ACB046C64959E1938ACA18DF97C278EFEE271";
-  private static final String SIGNATURE_INVALID =
-      "006E7314CA9B2E601FBF4CA144979B88F996D8A04D9F1E63E61CBECFBD0B0DE0ED84C5A052BFDAF1BC496762CE3ACB046C64959E1938ACA18DF97C278EFEE271";
+  private static final String ECC_KEY_INVALID = "FFFF";
   private static final String ZERO_VALUE =
       "0000000000000000000000000000000000000000000000000000000000000000";
   private static final String VALID_VALUE =
@@ -57,7 +56,7 @@ public class AsymmetricCryptoCardTransactionManagerAdapterTest {
       throws Exception {
     // Mock a valid CardPublicKeySpi
     CardPublicKeySpi mockPublicKey = mock(CardPublicKeySpi.class);
-    byte[] validPublicKey = HexUtil.toByteArray(SIGNATURE_VALID);
+    byte[] validPublicKey = HexUtil.toByteArray(ECC_KEY_VALID);
     when(mockPublicKey.getRawValue()).thenReturn(validPublicKey);
 
     // Create and initialize the adapter
@@ -73,7 +72,7 @@ public class AsymmetricCryptoCardTransactionManagerAdapterTest {
   public void initTerminalPkiSession_whenPublicKeyIsInvalid_shouldThrowICPE() throws Exception {
     // Mock an invalid CardPublicKeySpi
     CardPublicKeySpi mockPublicKey = mock(CardPublicKeySpi.class);
-    byte[] invalidPublicKey = HexUtil.toByteArray(SIGNATURE_INVALID);
+    byte[] invalidPublicKey = HexUtil.toByteArray(ECC_KEY_INVALID);
     when(mockPublicKey.getRawValue()).thenReturn(invalidPublicKey);
 
     // Create and initialize the adapter (should throw exception)
