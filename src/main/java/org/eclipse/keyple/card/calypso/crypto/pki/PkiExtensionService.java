@@ -11,9 +11,7 @@
  ************************************************************************************** */
 package org.eclipse.keyple.card.calypso.crypto.pki;
 
-import java.security.Security;
 import java.security.interfaces.RSAPublicKey;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.eclipse.keyple.core.util.Assert;
 import org.eclipse.keypop.calypso.card.transaction.spi.*;
 import org.eclipse.keypop.calypso.crypto.asymmetric.AsymmetricCryptoException;
@@ -31,11 +29,6 @@ public class PkiExtensionService {
 
   private boolean isTestMode = false;
   private boolean isTestModeConfigurable = true;
-
-  // Add BouncyCastle provider to support RSA PSS signing not available in standard Java.
-  static {
-    Security.addProvider(new BouncyCastleProvider());
-  }
 
   /**
    * Returns the service instance.
