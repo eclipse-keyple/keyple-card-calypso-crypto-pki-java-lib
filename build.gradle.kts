@@ -14,12 +14,12 @@ plugins {
 ///////////////////////////////////////////////////////////////////////////////
 
 dependencies {
-  implementation("org.eclipse.keyple:keyple-common-java-api:2.0.1")
-  implementation("org.eclipse.keypop:keypop-calypso-card-java-api:2.1.0")
+  implementation("org.eclipse.keyple:keyple-common-java-api:2.0.2")
+  implementation("org.eclipse.keypop:keypop-calypso-card-java-api:2.2.0")
   implementation("org.eclipse.keypop:keypop-calypso-crypto-asymmetric-java-api:0.2.0")
   implementation("org.eclipse.keyple:keyple-util-java-lib:2.4.0")
-  implementation("org.bouncycastle:bcprov-jdk18on:1.78")
-  implementation("org.bouncycastle:bcpkix-jdk18on:1.78")
+  implementation("org.bouncycastle:bcprov-jdk18on:1.83")
+  implementation("org.bouncycastle:bcpkix-jdk18on:1.83")
   implementation("org.slf4j:slf4j-api:1.7.32")
   implementation("com.google.code.gson:gson:2.10.1")
   testImplementation("org.slf4j:slf4j-simple:1.7.32")
