@@ -13,6 +13,7 @@ package org.eclipse.keyple.card.calypso.crypto.pki;
 
 import java.math.BigInteger;
 import java.security.*;
+import java.security.interfaces.ECPublicKey;
 import java.security.spec.*;
 import java.util.Arrays;
 import org.bouncycastle.asn1.*;
@@ -39,10 +40,30 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
   private static final String CARD_SESSION_SIGNATURE_SCHEME = "SHA256withECDSA";
   private static final String ELLIPTIC_CURVE = "EC";
   private static final String EC_DOMAIN_PARAMETERS_NAME = "secp256r1";
+  private static final ECParameterSpec EC_PARAMETER_SPEC;
   private final Signature signature;
   private final KeyFactory keyFactory;
-  private final ECParameterSpec ecParameterSpec;
   private boolean isRequest = true;
+
+  static {
+    ECParameterSpec ecParameterSpec;
+    try {
+      // Try the standard method
+      AlgorithmParameters params = AlgorithmParameters.getInstance(ELLIPTIC_CURVE);
+      params.init(new ECGenParameterSpec(EC_DOMAIN_PARAMETERS_NAME));
+      ecParameterSpec = params.getParameterSpec(ECParameterSpec.class);
+    } catch (Exception e) {
+      // Fallback for legacy JRE (e.g., Android < 26)
+      try {
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance(ELLIPTIC_CURVE);
+        kpg.initialize(new ECGenParameterSpec(EC_DOMAIN_PARAMETERS_NAME));
+        ecParameterSpec = ((ECPublicKey) kpg.generateKeyPair().getPublic()).getParams();
+      } catch (Exception ex) {
+        throw new IllegalStateException("Failed to initialize EC parameters", ex);
+      }
+    }
+    EC_PARAMETER_SPEC = ecParameterSpec;
+  }
 
   /**
    * Constructor
@@ -55,11 +76,8 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
   AsymmetricCryptoCardTransactionManagerAdapter() {
     try {
       signature = Signature.getInstance(CARD_SESSION_SIGNATURE_SCHEME);
-      AlgorithmParameters algorithmParameters = AlgorithmParameters.getInstance(ELLIPTIC_CURVE);
-      algorithmParameters.init(new ECGenParameterSpec(EC_DOMAIN_PARAMETERS_NAME));
-      ecParameterSpec = algorithmParameters.getParameterSpec(ECParameterSpec.class);
       keyFactory = KeyFactory.getInstance(ELLIPTIC_CURVE);
-    } catch (NoSuchAlgorithmException | InvalidParameterSpecException e) {
+    } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException(e.getMessage(), e);
     }
   }
@@ -82,7 +100,7 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
           new ECPoint(
               new BigInteger(1, Arrays.copyOfRange(cardPub, 0, 32)),
               new BigInteger(1, Arrays.copyOfRange(cardPub, 32, 64)));
-      ECPublicKeySpec ecPublicKeySpec = new ECPublicKeySpec(ecPoint, ecParameterSpec);
+      ECPublicKeySpec ecPublicKeySpec = new ECPublicKeySpec(ecPoint, EC_PARAMETER_SPEC);
       PublicKey publicKey = keyFactory.generatePublic(ecPublicKeySpec);
       signature.initVerify(publicKey);
       signature.update((byte) 0x10); // see requirement R203

@@ -50,12 +50,12 @@ public class PkiExtensionService {
    *
    * <p>The test mode can be set only just after the creation of the instance, this means that as
    * soon as one of the class's other methods is called, the call to this method will generate an
-   * {@link IllegalStateException} exception.
+   * {@link IllegalStateException} exception if the test mode has not been set yet.
    *
    * @since 0.1.0
    */
   public void setTestMode() {
-    if (!isTestModeConfigurable) {
+    if (!isTestMode && !isTestModeConfigurable) {
       throw new IllegalStateException("Test mode must be set first");
     }
     isTestMode = true;

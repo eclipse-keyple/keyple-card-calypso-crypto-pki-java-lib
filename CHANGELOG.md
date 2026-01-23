@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- Enhance EC parameter handling with fallback logic for Android API level < 26 (issue [#8]).
+- Prevent `PkiExtensionService.setTestMode()` from throwing an exception if test mode is already active (issue [#9]).
+### Upgraded
+- `keyple-common-java-api` from `2.0.1` to `2.0.2`
+- `keypop-calypso-card-java-api` from `2.1.0` to `2.2.0`
+- `bcprov-jdk18on` from `1.78` to `1.83` (BouncyCastle)
+- `bcpkix-jdk18on` from `1.78` to `1.83` (BouncyCastle)
 
 ## [0.2.3] - 2025-09-10
 ### Changed
@@ -38,3 +46,6 @@ This is the initial release.
 [0.2.1]: https://github.com/eclipse-keyple/keyple-card-calypso-crypto-pki-java-lib/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/eclipse-keyple/keyple-card-calypso-crypto-pki-java-lib/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/eclipse-keyple/keyple-card-calypso-crypto-pki-java-lib/releases/tag/0.1.0
+
+[#9]: https://github.com/eclipse-keyple/keyple-card-calypso-crypto-pki-java-lib/issues/9
+[#8]: https://github.com/eclipse-keyple/keyple-card-calypso-crypto-pki-java-lib/issues/8
