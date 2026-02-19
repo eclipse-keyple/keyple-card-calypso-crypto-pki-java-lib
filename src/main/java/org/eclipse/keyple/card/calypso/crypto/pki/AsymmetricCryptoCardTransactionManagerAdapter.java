@@ -92,7 +92,7 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       throws AsymmetricCryptoException {
     if (logger.isTraceEnabled()) {
       String cardPublicKeyHex = HexUtil.toHex(cardPublicKey.getRawValue());
-      logger.trace("Card public key: {}", cardPublicKeyHex);
+      logger.trace("Initializing terminal PKI session [cardPublicKey={}]", cardPublicKeyHex);
     }
     try {
       byte[] cardPub = cardPublicKey.getRawValue();
@@ -106,6 +106,9 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       signature.update((byte) 0x10); // see requirement R203
     } catch (Exception e) {
       throw new AsymmetricCryptoException(e.getMessage(), e);
+    }
+    if (logger.isTraceEnabled()) {
+      logger.trace("Terminal PKI session initialized");
     }
   }
 
@@ -126,11 +129,14 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       }
       if (logger.isTraceEnabled()) {
         String dataToHashHex = HexUtil.toHex(dataToHash);
-        logger.trace("Update hash with: {}", dataToHashHex);
+        logger.trace("Updating hash [data={}]", dataToHashHex);
       }
       signature.update((byte) dataToHash.length);
       signature.update(dataToHash);
       isRequest = !isRequest;
+      if (logger.isTraceEnabled()) {
+        logger.trace("Hash updated");
+      }
     } catch (Exception e) {
       throw new AsymmetricCryptoException(e.getMessage(), e);
     }
@@ -153,7 +159,7 @@ final class AsymmetricCryptoCardTransactionManagerAdapter
       // Ensure that r and s are not zero to prevent invalid signatures
       if (r.equals(BigInteger.ZERO) || s.equals(BigInteger.ZERO)) {
         throw new AsymmetricCryptoException(
-            "Invalid ECDSA signature: r or s is zero, rejecting signature.");
+            "Invalid ECDSA signature. 'r' or 's' is zero, rejecting signature");
       }
 
       // Encodes the DER sequence into a byte array.

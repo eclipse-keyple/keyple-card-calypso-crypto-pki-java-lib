@@ -54,7 +54,7 @@ final class CalypsoCaCertificateParserAdapter
 
     if (cardOutputData.length != CalypsoCaCertificateV1Constants.RAW_DATA_SIZE) {
       throw new CertificateValidationException(
-          "Invalid CA certificate size: expected "
+          "Invalid CA certificate size. Expected "
               + CalypsoCaCertificateV1Constants.RAW_DATA_SIZE
               + ", but got "
               + cardOutputData.length);
@@ -62,7 +62,7 @@ final class CalypsoCaCertificateParserAdapter
 
     if (cardOutputData[0] != CalypsoCaCertificateV1Constants.TYPE) {
       throw new CertificateValidationException(
-          "Invalid CA certificate type: Expected "
+          "Invalid CA certificate type. Expected "
               + HexUtil.toHex(CalypsoCaCertificateV1Constants.TYPE)
               + ", but got "
               + HexUtil.toHex(cardOutputData[0]));
@@ -70,7 +70,7 @@ final class CalypsoCaCertificateParserAdapter
 
     if (cardOutputData[1] != CalypsoCaCertificateV1Constants.VERSION) {
       throw new CertificateValidationException(
-          "Invalid CA certificate version: Expected "
+          "Invalid CA certificate version. Expected "
               + HexUtil.toHex(CalypsoCaCertificateV1Constants.VERSION)
               + ", but got "
               + HexUtil.toHex(cardOutputData[1]));

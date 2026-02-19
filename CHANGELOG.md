@@ -8,9 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Enhance EC parameter handling with fallback logic for Android API level < 26 (issue [#8]).
 - Prevent `PkiExtensionService.setTestMode()` from throwing an exception if test mode is already active (issue [#9]).
+### Changed
+- Normalized logging and error messages using Keyple coding standards.
 ### Upgraded
-- `keyple-common-java-api` from `2.0.1` to `2.0.2`
-- `keypop-calypso-card-java-api` from `2.1.0` to `2.2.0`
+- `keyple-common-java-api` from `2.0.1` to `2.0.2` (source code not impacted)
+- `keypop-calypso-card-java-api` from `2.1.0` to `2.2.0` (source code not impacted)
+- `keyple-util-java-lib` from `2.4.0` to `2.4.1` (source code not impacted)
+- `slf4j-api` from `1.7.32` to `1.7.36` (`compileOnly`)
 - `bcprov-jdk18on` from `1.78` to `1.83` (BouncyCastle)
 - `bcpkix-jdk18on` from `1.78` to `1.83` (BouncyCastle)
 

@@ -86,9 +86,9 @@ final class CalypsoCaCertificateV1Adapter
     // Check if issuer is allowed to authenticate this certificate
     if (!issuerCertificateContent.isCaCertificatesAuthenticationAllowed()) {
       throw new CertificateValidationException(
-          "Parent certificate ("
+          "Parent certificate '"
               + HexUtil.toHex(issuerCertificateContent.getPublicKeyReference())
-              + ") not allowed to authenticate a CA certificate");
+              + "' not allowed to authenticate a CA certificate");
     }
 
     byte[] recoveredData =
@@ -149,7 +149,8 @@ final class CalypsoCaCertificateV1Adapter
               - caTargetAidSize);
     } else {
       throw new CertificateValidationException(
-          "Bad target AID size: " + caTargetAidSize + ", expected between 5 and 16");
+          "Invalid CA target AID size. Expected to be in range [5..16], but got "
+              + caTargetAidSize);
     }
 
     // Determine if the AID is truncated analyzing the CA operating mode
@@ -206,7 +207,7 @@ final class CalypsoCaCertificateV1Adapter
 
     if (endDate != 0 && currentDate > endDate) {
       String endDateHex = HexUtil.toHex(endDate);
-      logger.warn("Certificate expired. End date: {}", endDateHex);
+      logger.warn("Certificate expired [endDate={}]", endDateHex);
     }
   }
 
