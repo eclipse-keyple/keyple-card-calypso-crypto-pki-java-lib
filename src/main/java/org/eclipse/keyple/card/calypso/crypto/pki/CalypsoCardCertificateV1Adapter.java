@@ -71,7 +71,7 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
               - cardAidSize);
     } else {
       throw new IllegalArgumentException(
-          "Bad card AID size: " + cardAidSize + ", expected between 5 and 16");
+          "Invalid card AID size. Expected to be in range [5..16], but got " + cardAidSize);
     }
 
     // Extract serial number
@@ -121,9 +121,9 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
     // Check if issuer is allowed to authenticate this certificate
     if (!issuerCertificateContent.isCardCertificatesAuthenticationAllowed()) {
       throw new CertificateValidationException(
-          "Parent certificate ("
+          "Parent certificate '"
               + HexUtil.toHex(issuerCertificateContent.getPublicKeyReference())
-              + ") not allowed to authenticate a card certificate");
+              + "' is not allowed to authenticate a card certificate");
     }
 
     ByteBuffer recoveredData =
@@ -174,7 +174,7 @@ final class CalypsoCardCertificateV1Adapter implements CardCertificate, CardCert
 
     if (endDate != 0 && currentDate > endDate) {
       String endDateHex = HexUtil.toHex(endDate);
-      logger.warn("Certificate expired. End date: {}", endDateHex);
+      logger.warn("Certificate expired [endDate={}]", endDateHex);
     }
   }
 
