@@ -14,7 +14,6 @@ plugins {
 ///////////////////////////////////////////////////////////////////////////////
 
 dependencies {
-  implementation("org.eclipse.keyple:keyple-common-java-api:2.0.2")
   implementation("org.eclipse.keypop:keypop-calypso-card-java-api:2.2.0")
   implementation("org.eclipse.keypop:keypop-calypso-crypto-asymmetric-java-api:0.2.0")
   implementation("org.eclipse.keyple:keyple-util-java-lib:2.4.1")
